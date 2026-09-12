@@ -4,6 +4,7 @@ struct ShoppingView: View {
     @Bindable var store: Store
     @Environment(\.scenePhase) private var scenePhase
     @State private var addPanelPresented = false
+    @State private var addPanelDetent: PresentationDetent = .height(88)
     @State private var managing = false
     @State private var pendingManagement = false
     @State private var editing: ListItem?
@@ -11,9 +12,8 @@ struct ShoppingView: View {
     private var remaining: Int { store.list.items.filter { !$0.purchased }.count }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            NavigationStack {
-                List {
+        NavigationStack {
+            List {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("UN PEU D’ORDRE,\nLES COURSES EN PLUS SIMPLE.")
@@ -51,39 +51,44 @@ struct ShoppingView: View {
                     }
                 }
             }
-                .contentMargins(.bottom, 112, for: .scrollContent)
-                .scrollContentBackground(.hidden)
-                .background(Color(.systemGroupedBackground))
-                .navigationTitle("Mes courses")
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Gérer les rayons", systemImage: "slider.horizontal.3") { showManagement() }
-                    }
+            .contentMargins(.bottom, 112, for: .scrollContent)
+            .scrollContentBackground(.hidden)
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Mes courses")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Gérer les rayons", systemImage: "slider.horizontal.3") { showManagement() }
                 }
-                .disabled(store.loadFailed)
-                .sheet(isPresented: $managing, onDismiss: restoreAddPanel) { AislesView(store: store) }
-                .sheet(item: $editing, onDismiss: restoreAddPanel) { item in EditProductView(store: store, item: item) }
-                .fullScreenCover(
-                    isPresented: Binding(get: { !store.list.onboarded && !store.loadFailed }, set: { _ in }),
-                    onDismiss: restoreAddPanel
-                ) {
-                    WelcomeView { store.update { $0.onboarded = true } }
-                }
-                .alert("Mes courses", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
-                    Button("Compris", role: .cancel) { store.error = nil }
-                } message: { Text(store.error ?? "") }
-                .onAppear { restoreAddPanel() }
-                .onChange(of: scenePhase) { _, phase in if phase == .active { store.refreshAvailability() } }
             }
-
-            if addPanelPresented {
-                AddProductDrawer(store: store) { item in
+            .disabled(store.loadFailed)
+            .sheet(isPresented: $addPanelPresented, onDismiss: dismissAddPanel) {
+                AddProductDrawer(store: store, selectedDetent: $addPanelDetent) { item in
                     pendingEdit = item
                     addPanelPresented = false
                 }
-                .onDisappear(perform: presentPendingDestination)
-                .zIndex(1)
+                .presentationDetents([.height(88), .custom(AddProductExpandedDetent.self)], selection: $addPanelDetent)
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(38)
+                .presentationBackground(Color(.systemBackground))
+                // Keep the compact add bar visible without making the list modal.
+                // At the compact detent, taps should pass through to list rows;
+                // the expanded sheet remains modal while the user is editing.
+                .presentationBackgroundInteraction(.enabled(upThrough: .height(88)))
+                .interactiveDismissDisabled(true)
             }
+            .sheet(isPresented: $managing, onDismiss: restoreAddPanel) { AislesView(store: store) }
+            .sheet(item: $editing, onDismiss: restoreAddPanel) { item in EditProductView(store: store, item: item) }
+            .fullScreenCover(
+                isPresented: Binding(get: { !store.list.onboarded && !store.loadFailed }, set: { _ in }),
+                onDismiss: restoreAddPanel
+            ) {
+                WelcomeView { store.update { $0.onboarded = true } }
+            }
+            .alert("Mes courses", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
+                Button("Compris", role: .cancel) { store.error = nil }
+            } message: { Text(store.error ?? "") }
+            .onAppear { restoreAddPanel() }
+            .onChange(of: scenePhase) { _, phase in if phase == .active { store.refreshAvailability() } }
         }
     }
 
@@ -115,8 +120,14 @@ struct ShoppingView: View {
         }
     }
 
+    private func dismissAddPanel() {
+        addPanelDetent = .height(88)
+        presentPendingDestination()
+    }
+
     private func restoreAddPanel() {
         guard store.list.onboarded, !store.loadFailed, !managing, editing == nil else { return }
+        addPanelDetent = .height(88)
         addPanelPresented = true
     }
 
@@ -137,7 +148,8 @@ struct ShoppingView: View {
                     Image(systemName: item.purchased ? "checkmark.circle.fill" : "circle")
                         .font(.title2).foregroundStyle(item.purchased ? Color.accentColor : Color.secondary)
                         .frame(width: 44, height: 44)
-                }.buttonStyle(.borderless)
+                        .contentShape(Rectangle())
+                }.buttonStyle(.plain)
                     .accessibilityLabel(item.purchased ? "Remettre à acheter" : "Marquer acheté")
                     .accessibilityValue(store.list.product(item.productID)?.name ?? "Produit")
                 Button { showEditor(item) } label: {
@@ -169,101 +181,29 @@ struct ShoppingView: View {
 
 struct AddProductDrawer: View {
     @Bindable var store: Store
+    @Binding var selectedDetent: PresentationDetent
     var openExisting: (ListItem) -> Void
     @FocusState private var focused: Bool
     @State private var name = ""
     @State private var note = ""
-    @State private var expanded = false
-    @State private var focusAfterExpansion = false
-    @State private var focusTask: Task<Void, Never>?
-    @GestureState private var dragTranslation: CGFloat = 0
-    private let compactHeight: CGFloat = 104
-    private let topCornerRadius: CGFloat = 38
+    private let compactHeight: CGFloat = 88
     private var existing: ListItem? {
         guard let product = store.list.matching(name) else { return nil }
         return store.list.items.first { $0.productID == product.id }
     }
 
     var body: some View {
-        GeometryReader { proxy in
-            let expandedHeight = min(proxy.size.height - 20, 720)
-            let height = drawerHeight(expandedHeight: expandedHeight)
-
-            drawerSurface(height: height, expandedHeight: expandedHeight)
-                .animation(.snappy(duration: 0.32, extraBounce: 0), value: expanded)
-                .frame(maxHeight: .infinity, alignment: .bottom)
-        }
-        .ignoresSafeArea(.container, edges: .bottom)
+        sheetContent(isCompact: selectedDetent == .height(compactHeight))
         .onChange(of: focused) { _, isFocused in
-            if isFocused, !expanded {
-                requestExpansionAndFocus()
+            if isFocused {
+                selectedDetent = .custom(AddProductExpandedDetent.self)
             }
         }
-        .onChange(of: expanded) { _, isExpanded in
-            if isExpanded, focusAfterExpansion {
-                focusTask?.cancel()
-                focusTask = Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 280_000_000)
-                    guard !Task.isCancelled, focusAfterExpansion, expanded else { return }
-                    focused = true
-                    focusAfterExpansion = false
-                }
-            } else {
-                focusTask?.cancel()
-                focusAfterExpansion = false
+        .onChange(of: selectedDetent) { _, detent in
+            if detent == .height(compactHeight) {
                 focused = false
             }
         }
-        .onDisappear { focusTask?.cancel() }
-    }
-
-    private var sheetShape: UnevenRoundedRectangle {
-        UnevenRoundedRectangle(
-            cornerRadii: .init(
-                topLeading: topCornerRadius,
-                bottomLeading: 0,
-                bottomTrailing: 0,
-                topTrailing: topCornerRadius
-            ),
-            style: .continuous
-        )
-    }
-
-    @ViewBuilder
-    private func drawerSurface(height: CGFloat, expandedHeight: CGFloat) -> some View {
-        let surface = sheetContent(isCompact: height < compactHeight + 12)
-            .frame(maxWidth: .infinity, alignment: .top)
-            .frame(height: height, alignment: .top)
-            .background(Color(.systemBackground))
-            .clipShape(sheetShape)
-            .contentShape(Rectangle())
-
-        if expanded {
-            surface.overlay(alignment: .top) {
-                dragHandle(expandedHeight: expandedHeight)
-            }
-        } else {
-            surface
-                .overlay(alignment: .top) { dragHandleVisual }
-                .highPriorityGesture(drawerDrag(expandedHeight: expandedHeight), including: .all)
-        }
-    }
-
-    private var dragHandleVisual: some View {
-        Capsule()
-            .fill(Color.secondary.opacity(0.38))
-            .frame(width: 36, height: 5)
-            .padding(.top, 10)
-            .allowsHitTesting(false)
-    }
-
-    private func dragHandle(expandedHeight: CGFloat) -> some View {
-        Color.clear
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .contentShape(Rectangle())
-            .overlay(alignment: .top) { dragHandleVisual }
-            .gesture(drawerDrag(expandedHeight: expandedHeight))
     }
 
     private var primaryField: some View {
@@ -295,10 +235,9 @@ struct AddProductDrawer: View {
         .contentShape(Capsule())
         .simultaneousGesture(
             TapGesture().onEnded {
-                if !expanded { requestExpansionAndFocus() }
+                selectedDetent = .custom(AddProductExpandedDetent.self)
             }
         )
-        .accessibilityHint("Touchez ou faites glisser vers le haut pour ouvrir")
     }
 
     private func sheetContent(isCompact: Bool) -> some View {
@@ -373,38 +312,13 @@ struct AddProductDrawer: View {
         name = ""
         note = ""
         focused = false
-        expanded = false
+        selectedDetent = .height(compactHeight)
     }
+}
 
-    private func requestExpansionAndFocus() {
-        guard !expanded else {
-            focused = true
-            return
-        }
-        focusAfterExpansion = true
-        focused = false
-        expanded = true
-    }
-
-    private func drawerHeight(expandedHeight: CGFloat) -> CGFloat {
-        let settledHeight = expanded ? expandedHeight : compactHeight
-        return min(max(settledHeight - dragTranslation, compactHeight), expandedHeight)
-    }
-
-    private func drawerDrag(expandedHeight: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 4)
-            .updating($dragTranslation) { value, state, _ in
-                state = value.translation.height
-            }
-            .onEnded { value in
-                let settledHeight = expanded ? expandedHeight : compactHeight
-                let projectedHeight = min(
-                    max(settledHeight - value.predictedEndTranslation.height, compactHeight),
-                    expandedHeight
-                )
-                expanded = projectedHeight > (compactHeight + expandedHeight) / 2
-                if !expanded { focused = false }
-            }
+private struct AddProductExpandedDetent: CustomPresentationDetent {
+    static func height(in context: Context) -> CGFloat? {
+        min(context.maxDetentValue, 720)
     }
 }
 
