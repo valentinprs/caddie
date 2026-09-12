@@ -14,6 +14,37 @@ struct Product: Identifiable, Codable, Equatable {
     // A nil aisle with hasPreference=true means an explicit choice of À classer.
     var hasPreference = false
     var preferredAisle: UUID?
+    // A nil aisle with hasClassification=true means the model chose À classer.
+    var hasClassification = false
+    var classificationSuggestion: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, aliases, uses, hasPreference, preferredAisle, hasClassification, classificationSuggestion
+    }
+
+    init(id: UUID = UUID(), name: String, aliases: [String] = [], uses: Int = 0, hasPreference: Bool = false,
+         preferredAisle: UUID? = nil, hasClassification: Bool = false, classificationSuggestion: String? = nil) {
+        self.id = id
+        self.name = name
+        self.aliases = aliases
+        self.uses = uses
+        self.hasPreference = hasPreference
+        self.preferredAisle = preferredAisle
+        self.hasClassification = hasClassification
+        self.classificationSuggestion = classificationSuggestion
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        name = try values.decode(String.self, forKey: .name)
+        aliases = try values.decodeIfPresent([String].self, forKey: .aliases) ?? []
+        uses = try values.decodeIfPresent(Int.self, forKey: .uses) ?? 0
+        hasPreference = try values.decodeIfPresent(Bool.self, forKey: .hasPreference) ?? false
+        preferredAisle = try values.decodeIfPresent(UUID.self, forKey: .preferredAisle)
+        hasClassification = try values.decodeIfPresent(Bool.self, forKey: .hasClassification) ?? false
+        classificationSuggestion = try values.decodeIfPresent(String.self, forKey: .classificationSuggestion)
+    }
 }
 
 struct ListItem: Identifiable, Codable, Equatable {
@@ -45,6 +76,36 @@ struct ShoppingList: Codable, Equatable {
     var items: [ListItem] = []
     var onboarded = false
 
+    private static let defaultProducts: [(name: String, aliases: [String], aisle: String)] = [
+        ("Bavette", ["bavettes"], "Boucherie"),
+        ("Tomates", ["tomate"], "Fruits et légumes"),
+        ("Tomates en conserve", ["tomate en conserve"], "Épicerie"),
+        ("Pommes", ["pomme"], "Fruits et légumes"),
+        ("Bananes", ["banane"], "Fruits et légumes"),
+        ("Carottes", ["carotte"], "Fruits et légumes"),
+        ("Courgettes", ["courgette"], "Fruits et légumes"),
+        ("Poulet", ["poulets"], "Boucherie"),
+        ("Saumon", [], "Poissonnerie"),
+        ("Jambon", [], "Charcuterie"),
+        ("Lait", [], "Produits laitiers et œufs"),
+        ("Œufs", ["œuf", "oeuf", "oeufs"], "Produits laitiers et œufs"),
+        ("Beurre", [], "Produits laitiers et œufs"),
+        ("Comté", [], "Produits laitiers et œufs"),
+        ("Yaourts", ["yaourt"], "Produits laitiers et œufs"),
+        ("Pain", ["pains"], "Boulangerie"),
+        ("Riz", [], "Épicerie"),
+        ("Pâtes", [], "Épicerie"),
+        ("Huile d’olive", ["huile d'olive"], "Épicerie"),
+        ("Café", [], "Épicerie"),
+        ("Petits pois surgelés", [], "Surgelés"),
+        ("Eau", [], "Boissons"),
+        ("Jus d’orange", ["jus d'orange"], "Boissons"),
+        ("Savon", ["savons"], "Hygiène et entretien"),
+        ("Dentifrice", [], "Hygiène et entretien"),
+        ("Lessive", [], "Hygiène et entretien"),
+        ("Papier toilette", [], "Hygiène et entretien")
+    ]
+
     static func key(_ value: String) -> String {
         value.split(whereSeparator: \.isWhitespace).joined(separator: " ")
             .folding(options: [.caseInsensitive], locale: Locale(identifier: "fr_FR"))
@@ -73,7 +134,12 @@ struct ShoppingList: Codable, Equatable {
     @discardableResult mutating func add(name: String, note: String) throws -> UUID {
         let product = try resolve(name)
         guard !items.contains(where: { $0.productID == product.id }) else { throw ListError.duplicate }
-        let item = ListItem(productID: product.id, note: note.trimmingCharacters(in: .whitespacesAndNewlines), aisleID: product.preferredAisle)
+        let item = ListItem(
+            productID: product.id,
+            note: note.trimmingCharacters(in: .whitespacesAndNewlines),
+            aisleID: product.preferredAisle,
+            suggestion: product.hasPreference ? nil : product.classificationSuggestion
+        )
         items.append(item)
         if let index = products.firstIndex(where: { $0.id == product.id }) { products[index].uses += 1 }
         return item.id
@@ -93,6 +159,10 @@ struct ShoppingList: Codable, Equatable {
         }
         return changed
     }
+    mutating func updateNote(_ id: UUID, note: String) throws {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { throw ListError.missing }
+        items[index].note = note.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
     mutating func assign(_ id: UUID, aisle: UUID?) {
         guard aisle == nil || aisles.contains(where: { $0.id == aisle }),
               let index = items.firstIndex(where: { $0.id == id }),
@@ -102,14 +172,20 @@ struct ShoppingList: Codable, Equatable {
         items[index].revision = UUID()
         products[productIndex].hasPreference = true
         products[productIndex].preferredAisle = aisle
+        products[productIndex].hasClassification = false
+        products[productIndex].classificationSuggestion = nil
     }
     // Apply only to the unchanged item and unchanged aisle configuration used for inference.
     mutating func applyClassification(_ id: UUID, revision: UUID, aisles snapshot: [Aisle], aisle: UUID?, suggestion: String?) {
         guard aisles == snapshot, let index = items.firstIndex(where: { $0.id == id && $0.revision == revision }),
-              product(items[index].productID)?.hasPreference == false,
+              let productIndex = products.firstIndex(where: { $0.id == items[index].productID }),
+              products[productIndex].hasPreference == false,
               aisle == nil || aisles.contains(where: { $0.id == aisle }) else { return }
         items[index].aisleID = aisle
         items[index].suggestion = aisle == nil ? suggestion : nil
+        products[productIndex].preferredAisle = aisle
+        products[productIndex].hasClassification = true
+        products[productIndex].classificationSuggestion = aisle == nil ? suggestion : nil
     }
     @discardableResult mutating func addAisle(_ name: String) throws -> UUID {
         let name = Self.clean(name)
@@ -126,6 +202,11 @@ struct ShoppingList: Codable, Equatable {
         guard let index = aisles.firstIndex(where: { $0.id == id }) else { return }
         aisles[index].name = name
     }
+    mutating func editAisle(_ id: UUID, name: String, symbol: String) throws {
+        guard let index = aisles.firstIndex(where: { $0.id == id }) else { throw ListError.missing }
+        try renameAisle(id, name: name)
+        aisles[index].symbol = symbol
+    }
     mutating func deleteAisle(_ id: UUID) {
         aisles.removeAll { $0.id == id }
         for index in items.indices where items[index].aisleID == id {
@@ -136,6 +217,8 @@ struct ShoppingList: Codable, Equatable {
         for index in products.indices where products[index].preferredAisle == id {
             products[index].hasPreference = false
             products[index].preferredAisle = nil
+            products[index].hasClassification = false
+            products[index].classificationSuggestion = nil
         }
     }
     mutating func toggle(_ id: UUID) {
@@ -146,18 +229,25 @@ struct ShoppingList: Codable, Equatable {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         items[index].suggestion = nil
     }
+    mutating func registerDefaultProductClassifications() {
+        for definition in Self.defaultProducts {
+            guard let productIndex = products.firstIndex(where: { Self.key($0.name) == Self.key(definition.name) }),
+                  !products[productIndex].hasPreference,
+                  !products[productIndex].hasClassification,
+                  let aisle = aisles.first(where: { Self.key($0.name) == Self.key(definition.aisle) }) else { continue }
+            products[productIndex].preferredAisle = aisle.id
+            products[productIndex].hasClassification = true
+        }
+    }
     static func initial() -> Self {
         let names = ["Fruits et légumes", "Boucherie", "Poissonnerie", "Charcuterie", "Produits laitiers et œufs", "Boulangerie", "Épicerie", "Surgelés", "Boissons", "Hygiène et entretien"]
         let symbols = ["carrot", "fork.knife", "fish", "fork.knife", "refrigerator", "birthday.cake", "cabinet", "snowflake", "waterbottle", "bubbles.and.sparkles"]
-        let seeds: [(String, [String])] = [
-            ("Bavette", ["bavettes"]), ("Tomates", ["tomate"]), ("Tomates en conserve", ["tomate en conserve"]),
-            ("Pommes", ["pomme"]), ("Bananes", ["banane"]), ("Carottes", ["carotte"]), ("Courgettes", ["courgette"]),
-            ("Poulet", ["poulets"]), ("Saumon", []), ("Jambon", []), ("Lait", []), ("Œufs", ["œuf", "oeuf", "oeufs"]),
-            ("Beurre", []), ("Comté", []), ("Yaourts", ["yaourt"]), ("Pain", ["pains"]), ("Riz", []), ("Pâtes", []),
-            ("Huile d’olive", ["huile d'olive"]), ("Café", []), ("Petits pois surgelés", []), ("Eau", []),
-            ("Jus d’orange", ["jus d'orange"]), ("Savon", ["savons"]), ("Dentifrice", []), ("Lessive", []), ("Papier toilette", [])
-        ]
-        return Self(aisles: zip(names, symbols).map { Aisle(name: $0, symbol: $1) }, products: seeds.map { Product(name: $0.0, aliases: $0.1) })
+        var list = Self(
+            aisles: zip(names, symbols).map { Aisle(name: $0, symbol: $1) },
+            products: defaultProducts.map { Product(name: $0.name, aliases: $0.aliases) }
+        )
+        list.registerDefaultProductClassifications()
+        return list
     }
 }
 
@@ -165,7 +255,9 @@ struct LocalRepository {
     let url: URL
     func load() throws -> ShoppingList {
         guard FileManager.default.fileExists(atPath: url.path) else { return .initial() }
-        return try JSONDecoder().decode(ShoppingList.self, from: Data(contentsOf: url))
+        var list = try JSONDecoder().decode(ShoppingList.self, from: Data(contentsOf: url))
+        list.registerDefaultProductClassifications()
+        return list
     }
     func save(_ list: ShoppingList) throws {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)

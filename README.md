@@ -20,7 +20,10 @@ Le classement automatique nécessite un iPhone compatible, Apple Intelligence ac
 - Classement par Foundation Models, suggestions de nouveaux rayons à accepter ou ignorer.
 - Corrections mémorisées, y compris le choix explicite de « À classer ».
 - Modification et suppression des produits ; achats cochés regroupés en bas et suppression collective.
-- Ajout, renommage, réorganisation et suppression des rayons.
+- Ajout par la touche de validation du clavier ou directement depuis les suggestions ; un produit déjà présent ouvre sa fiche.
+- Sheet flottante native iOS, centrée visuellement grâce au dimensionnement `form` et à une vue de référence couvrant l’écran. Son champ compact remplit la largeur disponible et garde 14 points de marge uniforme sur ses quatre côtés. Le fond système est opaque (blanc en mode clair, sombre en mode sombre), l’ouverture en grande hauteur conserve le brouillon, et les suggestions sont en cartes sans séparateur final. Aucun masque sous la sheet ni bordure sur les champs.
+- Barre repliée avec loupe, sans avatar ni bouton micro. La saisie vocale utilise uniquement le micro du clavier iPhone, selon les réglages système de Dictée ; l’app ne capture pas le microphone et ne demande aucune autorisation de reconnaissance vocale.
+- Ajout, renommage, choix de l’icône, réorganisation et suppression des rayons.
 - Sauvegarde atomique ; une erreur de lecture bloque les modifications afin de conserver le fichier existant.
 
 ## Organisation

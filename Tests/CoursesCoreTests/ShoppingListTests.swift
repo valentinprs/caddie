@@ -12,6 +12,13 @@ final class ShoppingListTests: XCTestCase {
         XCTAssertNotNil(list.matching("Bavette"))
         XCTAssertNoThrow(try list.add(name: "bavettes", note: ""))
     }
+    func testDefaultSuggestionsArePreclassifiedInRegistry() throws {
+        let list = ShoppingList.initial()
+        XCTAssertFalse(list.products.isEmpty)
+        XCTAssertTrue(list.products.allSatisfy(\.hasClassification))
+        XCTAssertEqual(list.matching("Tomates")?.preferredAisle, list.aisles.first { $0.name == "Fruits et légumes" }?.id)
+        XCTAssertEqual(list.matching("Tomates en conserve")?.preferredAisle, list.aisles.first { $0.name == "Épicerie" }?.id)
+    }
     func testManualPreferenceSurvivesReadditionIncludingUnclassified() throws {
         var list = ShoppingList.initial()
         let id = try list.add(name: "Bavette", note: "")
@@ -25,6 +32,50 @@ final class ShoppingListTests: XCTestCase {
         _ = try list.add(name: "Bavette", note: "")
         XCTAssertTrue(try XCTUnwrap(list.matching("Bavette")).hasPreference)
         XCTAssertNil(list.items.first?.aisleID)
+    }
+    func testModelClassificationIsRegisteredAndReusedAfterReaddition() throws {
+        var list = ShoppingList.initial()
+        let id = try list.add(name: "Croquettes", note: "")
+        let item = try XCTUnwrap(list.items.first)
+        let aisle = list.aisles[6].id
+        list.applyClassification(id, revision: item.revision, aisles: list.aisles, aisle: aisle, suggestion: nil)
+
+        let product = try XCTUnwrap(list.matching("Croquettes"))
+        XCTAssertTrue(product.hasClassification)
+        XCTAssertFalse(product.hasPreference)
+        XCTAssertEqual(product.preferredAisle, aisle)
+
+        list.items.removeAll()
+        _ = try list.add(name: "croquettes", note: "")
+        XCTAssertEqual(list.items.first?.aisleID, aisle)
+        XCTAssertNil(list.items.first?.suggestion)
+    }
+    func testUnclassifiedModelResultAndSuggestionAreRegistered() throws {
+        var list = ShoppingList.initial()
+        let id = try list.add(name: "Croquettes", note: "")
+        let item = try XCTUnwrap(list.items.first)
+        list.applyClassification(id, revision: item.revision, aisles: list.aisles, aisle: nil, suggestion: "Animalerie")
+
+        list.items.removeAll()
+        _ = try list.add(name: "Croquettes", note: "")
+        XCTAssertTrue(try XCTUnwrap(list.matching("Croquettes")).hasClassification)
+        XCTAssertNil(list.items.first?.aisleID)
+        XCTAssertEqual(list.items.first?.suggestion, "Animalerie")
+    }
+    func testManualChoiceReplacesRegisteredModelClassification() throws {
+        var list = ShoppingList.initial()
+        let id = try list.add(name: "Croquettes", note: "")
+        let item = try XCTUnwrap(list.items.first)
+        list.applyClassification(id, revision: item.revision, aisles: list.aisles, aisle: list.aisles[6].id, suggestion: nil)
+        let manualAisle = list.aisles[9].id
+        list.assign(id, aisle: manualAisle)
+
+        list.items.removeAll()
+        _ = try list.add(name: "Croquettes", note: "")
+        let product = try XCTUnwrap(list.matching("Croquettes"))
+        XCTAssertTrue(product.hasPreference)
+        XCTAssertFalse(product.hasClassification)
+        XCTAssertEqual(list.items.first?.aisleID, manualAisle)
     }
     func testDeletingAisleClearsPreferencesAndKeepsProducts() throws {
         var list = ShoppingList.initial()
@@ -49,20 +100,31 @@ final class ShoppingListTests: XCTestCase {
         let revision = try XCTUnwrap(list.items.last).revision
         try list.renameAisle(snapshot[4].id, name: "Crémerie")
         list.applyClassification(other, revision: revision, aisles: snapshot, aisle: snapshot[4].id, suggestion: nil)
-        XCTAssertNil(list.items.last?.aisleID)
+        XCTAssertEqual(list.items.last?.aisleID, snapshot[4].id)
     }
     func testRenamingReplacesProductPreservesNoteAndRejectsCollision() throws {
         var list = ShoppingList.initial()
         let id = try list.add(name: "Tomates", note: "2 boîtes")
         list.assign(id, aisle: list.aisles[0].id)
         XCTAssertTrue(try list.edit(id, name: "Tomates en conserve", note: "2 boîtes"))
-        XCTAssertNil(list.items.first?.aisleID)
+        XCTAssertEqual(list.items.first?.aisleID, list.aisles[6].id)
         XCTAssertEqual(list.items.first?.note, "2 boîtes")
         XCTAssertTrue(try XCTUnwrap(list.matching("Tomates")).hasPreference)
         _ = try list.add(name: "Bavette", note: "")
         let before = list
         XCTAssertThrowsError(try list.edit(id, name: "bavettes", note: "different"))
         XCTAssertEqual(list, before)
+    }
+    func testUpdatingNotePreservesProductAndClassification() throws {
+        var list = ShoppingList.initial()
+        let id = try list.add(name: "Tomates", note: "")
+        let productID = try XCTUnwrap(list.items.first?.productID)
+        let aisleID = try XCTUnwrap(list.items.first?.aisleID)
+        try list.updateNote(id, note: "  500 g  ")
+        XCTAssertEqual(list.items.first?.note, "500 g")
+        XCTAssertEqual(list.items.first?.productID, productID)
+        XCTAssertEqual(list.items.first?.aisleID, aisleID)
+        XCTAssertThrowsError(try list.updateNote(UUID(), note: "1 kg"))
     }
     func testSuggestionDoesNotCreateAisleAndManualChoiceDismissesIt() throws {
         var list = ShoppingList.initial()
@@ -93,11 +155,61 @@ final class ShoppingListTests: XCTestCase {
         let id = try list.add(name: "Bavette", note: "2 pièces")
         list.assign(id, aisle: list.aisles[1].id)
         list.onboarded = true
+        try list.editAisle(list.aisles[1].id, name: "Viandes", symbol: "basket")
         try repository.save(list)
         XCTAssertEqual(try repository.load(), list)
         let corrupt = Data("broken".utf8)
         try corrupt.write(to: repository.url)
         XCTAssertThrowsError(try repository.load())
         XCTAssertEqual(try Data(contentsOf: repository.url), corrupt)
+    }
+    func testDecodingExistingProductDefaultsClassificationRegistryFields() throws {
+        let id = UUID()
+        let data = Data("""
+        {"id":"\(id.uuidString)","name":"Bavette","aliases":[],"uses":1,"hasPreference":false}
+        """.utf8)
+        let product = try JSONDecoder().decode(Product.self, from: data)
+        XCTAssertFalse(product.hasClassification)
+        XCTAssertNil(product.classificationSuggestion)
+    }
+    func testLoadingExistingListRegistersDefaultProductsWithoutOverwritingPreferences() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let repository = LocalRepository(url: directory.appendingPathComponent("list.json"))
+        var list = ShoppingList.initial()
+        for index in list.products.indices {
+            list.products[index].hasClassification = false
+            list.products[index].preferredAisle = nil
+        }
+        let bavette = try XCTUnwrap(list.matching("Bavette"))
+        let item = try list.add(name: bavette.name, note: "")
+        let manualAisle = list.aisles[9].id
+        list.assign(item, aisle: manualAisle)
+        try repository.save(list)
+
+        let migrated = try repository.load()
+        XCTAssertEqual(migrated.matching("Bavette")?.preferredAisle, manualAisle)
+        XCTAssertTrue(try XCTUnwrap(migrated.matching("Tomates")).hasClassification)
+        XCTAssertEqual(migrated.matching("Tomates")?.preferredAisle, migrated.aisles[0].id)
+    }
+    func testEditingAisleIconPreservesProductsAndPreferences() throws {
+        var list = ShoppingList.initial()
+        let aisle = list.aisles[1].id
+        let item = try list.add(name: "Bavette", note: "2 pièces")
+        list.assign(item, aisle: aisle)
+        let items = list.items
+        let products = list.products
+        let order = list.aisles.map(\.id)
+        try list.editAisle(aisle, name: "Viandes", symbol: "basket")
+        XCTAssertEqual(list.aisles[1].symbol, "basket")
+        XCTAssertEqual(list.aisles[1].name, "Viandes")
+        XCTAssertEqual(list.aisles.map(\.id), order)
+        XCTAssertEqual(list.items, items)
+        XCTAssertEqual(list.products, products)
+        let before = list
+        XCTAssertThrowsError(try list.editAisle(aisle, name: "Boissons", symbol: "fish"))
+        XCTAssertThrowsError(try list.editAisle(aisle, name: " ", symbol: "fish"))
+        XCTAssertThrowsError(try list.editAisle(UUID(), name: "Viandes", symbol: "fish"))
+        XCTAssertEqual(list, before)
     }
 }

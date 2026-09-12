@@ -53,7 +53,7 @@ final class Store {
         refreshAvailability()
         guard intelligenceStatus == nil,
               let item = list.items.first(where: { $0.id == id }),
-              let product = list.product(item.productID), !product.hasPreference,
+              let product = list.product(item.productID), !product.hasPreference, !product.hasClassification,
               !classifying.contains(id) else { return }
         let snapshot = list.aisles
         classifying.insert(id)
