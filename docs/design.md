@@ -38,7 +38,9 @@
 - Utiliser le modèle embarqué Apple Intelligence pour proposer le classement.
 - Application native SwiftUI ciblant iOS 26 et ultérieur.
 - Sauvegarde JSON locale atomique dans Application Support, sans service distant.
-- Foundation Models avec schéma de génération dynamique limité aux identifiants des rayons existants et à une option sans classement.
+- Foundation Models avec schéma de génération dynamique limité aux noms exacts des rayons existants et à « À classer ». Les UUID restent internes : le nom choisi est résolu vers l’identifiant du rayon dans l’instantané utilisé pour la requête. Les noms sont triés pour ne pas dépendre de l’ordre d’affichage.
+- Le classement s’appuie sur la nature, l’usage et les précisions du nom complet, sans exemples orientant le modèle ni table de correspondance entre produits et rayons. Un nom ambigu reste « À classer » sans suggestion ; une famille identifiable sans rayon adapté peut donner lieu à une suggestion.
+- Deux requêtes locales séparent l’identification de la famille commerciale, sans liste de rayons pour l’influencer, du choix parmi les rayons disponibles. Cette séparation augmente le temps de classement mais évite certaines confusions entre produit fini et matière première. La description intermédiaire est indicative, non persistée ; les corrections manuelles et les protections contre les réponses périmées restent prioritaires.
 - Les réponses tardives sont ignorées après correction manuelle, changement de produit ou modification des rayons.
 
 ## État du cadrage
