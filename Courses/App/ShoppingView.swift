@@ -11,7 +11,7 @@ struct ShoppingView: View {
     @State private var addPanelPresented = false
     @State private var addPanelDetent: PresentationDetent = AddPanelLayout.compact
     @State private var managing = false
-    @State private var pendingManagement = false
+    @State private var managementRequested = false
     @State private var editing: ListItem?
     @State private var pendingEdit: ListItem?
     var body: some View {
@@ -56,7 +56,11 @@ struct ShoppingView: View {
             }
             .disabled(store.loadFailed)
             .sheet(isPresented: $addPanelPresented, onDismiss: dismissAddPanel) {
-                AddProductDrawer(store: store, selectedDetent: $addPanelDetent) { item in
+                AddProductDrawer(
+                    store: store,
+                    selectedDetent: $addPanelDetent,
+                    managementPresented: $managementRequested
+                ) { item in
                     pendingEdit = item
                     addPanelPresented = false
                 }
@@ -90,8 +94,9 @@ struct ShoppingView: View {
 
     private func showManagement() {
         if addPanelPresented {
-            pendingManagement = true
-            addPanelPresented = false
+            // The compact drawer remains mounted; its nested sheet presents the
+            // management view directly above it, avoiding a dismissal gap.
+            managementRequested = true
         } else {
             managing = true
         }
@@ -107,10 +112,7 @@ struct ShoppingView: View {
     }
 
     private func presentPendingDestination() {
-        if pendingManagement {
-            pendingManagement = false
-            managing = true
-        } else if let pendingEdit {
+        if let pendingEdit {
             self.pendingEdit = nil
             editing = pendingEdit
         }
@@ -230,7 +232,7 @@ private struct ProductRow: View {
                 .accessibilityLabel(item.purchased ? "Remettre à acheter" : "Marquer acheté")
                 .accessibilityValue(store.list.product(item.productID)?.name ?? "Produit")
 
-                VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 4) {
                     Button(action: edit) {
                         Text(store.list.product(item.productID)?.name ?? "Produit")
                             .font(.body.weight(.medium))
@@ -307,12 +309,12 @@ private extension UIView {
 struct AddProductDrawer: View {
     @Bindable var store: Store
     @Binding var selectedDetent: PresentationDetent
+    @Binding var managementPresented: Bool
     var openExisting: (ListItem) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private enum Field: Hashable { case name, note }
+    private enum Field: Hashable { case name }
     @FocusState private var focused: Field?
     @State private var name = ""
-    @State private var note = ""
     private var isCompact: Bool { selectedDetent == AddPanelLayout.compact }
     private var transitionAnimation: Animation? { reduceMotion ? nil : .smooth(duration: 0.45, extraBounce: 0) }
     private var existing: ListItem? {
@@ -334,10 +336,18 @@ struct AddProductDrawer: View {
                 }
             }
             .padding(14)
-
-            if !isCompact {
-                sheetContent
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if isCompact {
+                    focused = .name
+                }
             }
+
+            // Keep the content in place while the presentation controller is dragged.
+            // The sheet clips it at the compact detent, then reveals it continuously as
+            // its height grows. Conditional creation here made it pop in only after the
+            // large detent had been selected.
+            sheetContent
         }
         .onChange(of: focused) { _, isFocused in
             if isFocused != nil {
@@ -349,6 +359,9 @@ struct AddProductDrawer: View {
                 focused = nil
             }
         }
+        .sheet(isPresented: $managementPresented) {
+            AislesView(store: store)
+        }
     }
 
     private var primaryField: some View {
@@ -358,8 +371,8 @@ struct AddProductDrawer: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 24)
             TextField("Ajouter un produit", text: $name,
-                      prompt: Text("Ajouter un produit").foregroundStyle(.secondary))
-                .font(.body.weight(.medium))
+                      prompt: Text("Ajouter un produit").foregroundStyle(Color.primary.opacity(0.55)))
+                .font(.system(size: 18, weight: .medium))
                 .focused($focused, equals: .name)
                 .submitLabel(.done)
                 .onSubmit { addProduct() }
@@ -368,11 +381,8 @@ struct AddProductDrawer: View {
         .padding(.trailing, 16)
         .frame(height: 48)
         .frame(maxWidth: .infinity)
-        .background(
-            isCompact ? Color(.tertiarySystemFill) : Color(.secondarySystemGroupedBackground),
-            in: Capsule()
-        )
-        .contentShape(Capsule())
+        // The search affordance lives directly on the sheet surface in both detents.
+        .contentShape(Rectangle())
     }
 
     private var sheetContent: some View {
@@ -397,6 +407,10 @@ struct AddProductDrawer: View {
                 LazyVStack(spacing: 0) {
                     ForEach(suggestions) { product in
                         let item = store.list.items.first { $0.productID == product.id }
+                        let aisleID = item?.aisleID ?? product.preferredAisle
+                        let aisleSymbol = aisleID.flatMap { id in
+                            store.list.aisles.first { $0.id == id }?.symbol
+                        } ?? "basket"
                         Button {
                             if let item {
                                 focused = nil
@@ -406,7 +420,7 @@ struct AddProductDrawer: View {
                             }
                         } label: {
                             HStack(spacing: 14) {
-                                Image(systemName: "basket")
+                                Image(systemName: aisleSymbol)
                                     .font(.title3)
                                     .foregroundStyle(.secondary)
                                     .frame(width: 24)
@@ -432,21 +446,6 @@ struct AddProductDrawer: View {
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 28))
                 .padding(.horizontal, 16)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    TextField("Quantité ou précision (facultatif)", text: $note)
-                        .focused($focused, equals: .note)
-                        .submitLabel(.done)
-                        .onSubmit { addProduct() }
-                        .font(.subheadline)
-                        .padding(.horizontal, 16)
-                        .frame(height: 52)
-                        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
-                    Text("Précisez le produit dans son nom : « Tomates en conserve ». Le rayon sera choisi à partir de ce nom.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 24)
-
                 if let existing {
                     Button("Retrouver le produit déjà présent") { focused = nil; openExisting(existing) }
                         .padding(.horizontal, 20)
@@ -466,9 +465,8 @@ struct AddProductDrawer: View {
     private func addProduct(named productName: String? = nil) {
         let submittedName = productName ?? name
         guard !ShoppingList.clean(submittedName).isEmpty else { return }
-        guard store.add(name: submittedName, note: note) else { return }
+        guard store.add(name: submittedName, note: "") else { return }
         name = ""
-        note = ""
         collapse()
     }
 
