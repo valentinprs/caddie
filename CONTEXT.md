@@ -1,4 +1,4 @@
-# Courses
+# Caddie
 
 Vocabulaire de l’application d’aide aux courses.
 

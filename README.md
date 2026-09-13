@@ -1,11 +1,11 @@
-# Mes courses
+# Caddie
 
 Application iPhone native en SwiftUI, pour une liste personnelle permanente organisée par rayons. Données locales, sans compte ni serveur.
 
 ## Ouvrir et lancer
 
-1. Ouvrir `Courses.xcodeproj` dans Xcode 26 ou ultérieur.
-2. Sélectionner le schéma `Courses` et un simulateur iPhone sous iOS 26 ou ultérieur.
+1. Ouvrir `Caddie.xcodeproj` dans Xcode 26 ou ultérieur.
+2. Sélectionner le schéma `Caddie` et un simulateur iPhone sous iOS 26 ou ultérieur.
 3. Lancer avec ⌘R.
 
 Pour installer sur un iPhone, choisir sa propre équipe dans **Signing & Capabilities**, adapter le bundle identifier si nécessaire et sélectionner l’appareil. Aucune équipe de signature n’est imposée dans le projet.
@@ -28,18 +28,18 @@ Le classement automatique nécessite un iPhone compatible, Apple Intelligence ac
 
 ## Organisation
 
-- `Courses/Core/ShoppingList.swift` : identité des produits, règles de liste et persistance.
-- `Courses/App/Store.swift` : coordination des changements et du classement asynchrone.
-- `Courses/App/Intelligence.swift` : disponibilité du modèle et génération structurée.
-- `Courses/App/ShoppingView.swift` : vues SwiftUI et découverte.
-- `Tests/CoursesCoreTests` : tests des règles métier et de la persistance.
+- `Caddie/Core/ShoppingList.swift` : identité des produits, règles de liste et persistance.
+- `Caddie/App/Store.swift` : coordination des changements et du classement asynchrone.
+- `Caddie/App/Intelligence.swift` : disponibilité du modèle et génération structurée.
+- `Caddie/App/ShoppingView.swift` : vues SwiftUI et découverte.
+- `Tests/CaddieCoreTests` : tests des règles métier et de la persistance.
 - `docs/design.md` et `CONTEXT.md` : décisions et vocabulaire validés.
 
 ## Vérifications
 
 ```sh
 swift test
-xcodebuild -project Courses.xcodeproj -scheme Courses -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project Caddie.xcodeproj -scheme Caddie -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 ```
 
 Le modèle n’est pas simulé par les tests métier : la qualité du classement français doit être vérifiée sur un iPhone compatible avec Apple Intelligence. Exemples à essayer : Bavette → Boucherie, Comté → Produits laitiers et œufs, Tomates en conserve → Épicerie ; puis un produit sans rayon adapté, une correction manuelle et un nouvel ajout après suppression.

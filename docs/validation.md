@@ -24,7 +24,7 @@ rayon existant ou une indisponibilité du modèle fait échouer la commande.
 Sur un Mac compatible avec Apple Intelligence et le français, avec Xcode 26 :
 
 ```sh
-swiftc Courses/Core/ShoppingList.swift Courses/App/Intelligence.swift \
+  swiftc Caddie/Core/ShoppingList.swift Caddie/App/Intelligence.swift \
   Tests/ClassificationChecks.swift -o /tmp/courses-classification-checks
 LANG=fr_FR.UTF-8 LC_ALL=fr_FR.UTF-8 /tmp/courses-classification-checks \
   "NOM_DU_PRODUIT" "RAYON_ATTENDU" -AppleLanguages '(fr)' -AppleLocale fr_FR

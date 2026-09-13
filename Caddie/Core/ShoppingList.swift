@@ -1,9 +1,46 @@
 import Foundation
 
+enum AisleIconColor: String, Codable, CaseIterable, Identifiable {
+    case primary
+    case orange
+    case yellow
+    case green
+    case mint
+    case teal
+    case cyan
+    case blue
+    case indigo
+    case purple
+    case pink
+    case red
+
+    var id: Self { self }
+}
+
 struct Aisle: Identifiable, Codable, Equatable {
     var id = UUID()
     var name: String
     var symbol: String = "basket"
+    var iconColor: AisleIconColor = .primary
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, symbol, iconColor
+    }
+
+    init(id: UUID = UUID(), name: String, symbol: String = "basket", iconColor: AisleIconColor = .primary) {
+        self.id = id
+        self.name = name
+        self.symbol = symbol
+        self.iconColor = iconColor
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        name = try values.decode(String.self, forKey: .name)
+        symbol = try values.decodeIfPresent(String.self, forKey: .symbol) ?? "basket"
+        iconColor = try values.decodeIfPresent(AisleIconColor.self, forKey: .iconColor) ?? .primary
+    }
 }
 
 struct Product: Identifiable, Codable, Equatable {
@@ -206,6 +243,11 @@ struct ShoppingList: Codable, Equatable {
         guard let index = aisles.firstIndex(where: { $0.id == id }) else { throw ListError.missing }
         try renameAisle(id, name: name)
         aisles[index].symbol = symbol
+    }
+    mutating func editAisleIcon(_ id: UUID, symbol: String, iconColor: AisleIconColor) throws {
+        guard let index = aisles.firstIndex(where: { $0.id == id }) else { throw ListError.missing }
+        aisles[index].symbol = symbol
+        aisles[index].iconColor = iconColor
     }
     mutating func deleteAisle(_ id: UUID) {
         aisles.removeAll { $0.id == id }
