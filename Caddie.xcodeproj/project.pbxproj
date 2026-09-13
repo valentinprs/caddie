@@ -7,20 +7,22 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1872FA6B55F01812FA1CE52A /* Courses/App/Intelligence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C69F3F079F8CB3336B5CFDB /* Courses/App/Intelligence.swift */; };
-		5EAF599294DBCC66F505782A /* Courses/App/CoursesApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 184B59C24E4BB9B793D7E7E8 /* Courses/App/CoursesApp.swift */; };
-		B9167B4BB43D224A97983F99 /* Courses/App/ShoppingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BAA074F0DCF79D47F5F8365 /* Courses/App/ShoppingView.swift */; };
-		D3749FC3C1E782AA4F9A4371 /* Courses/App/Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = C931C79178FCB76777B87F31 /* Courses/App/Store.swift */; };
-		FE928E0C6247409A51E5BD79 /* Courses/Core/ShoppingList.swift in Sources */ = {isa = PBXBuildFile; fileRef = A55291814477FA2C37C8EF9B /* Courses/Core/ShoppingList.swift */; };
+		1872FA6B55F01812FA1CE52A /* Caddie/App/Intelligence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C69F3F079F8CB3336B5CFDB /* Caddie/App/Intelligence.swift */; };
+		5EAF599294DBCC66F505782A /* Caddie/App/CaddieApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 184B59C24E4BB9B793D7E7E8 /* Caddie/App/CaddieApp.swift */; };
+		B9167B4BB43D224A97983F99 /* Caddie/App/ShoppingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BAA074F0DCF79D47F5F8365 /* Caddie/App/ShoppingView.swift */; };
+		D3749FC3C1E782AA4F9A4371 /* Caddie/App/Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = C931C79178FCB76777B87F31 /* Caddie/App/Store.swift */; };
+		FE928E0C6247409A51E5BD79 /* Caddie/Core/ShoppingList.swift in Sources */ = {isa = PBXBuildFile; fileRef = A55291814477FA2C37C8EF9B /* Caddie/Core/ShoppingList.swift */; };
+		D5C4D2A1A17A4A0C9E4D7B1F /* Caddie/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D5C4D2A0A17A4A0C9E4D7B1F /* Caddie/Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		184B59C24E4BB9B793D7E7E8 /* Courses/App/CoursesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Courses/App/CoursesApp.swift; sourceTree = SOURCE_ROOT; };
-		38A007151ABE87CC01A5B6E9 /* Courses.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Courses.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		3C69F3F079F8CB3336B5CFDB /* Courses/App/Intelligence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Courses/App/Intelligence.swift; sourceTree = SOURCE_ROOT; };
-		5BAA074F0DCF79D47F5F8365 /* Courses/App/ShoppingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Courses/App/ShoppingView.swift; sourceTree = SOURCE_ROOT; };
-		A55291814477FA2C37C8EF9B /* Courses/Core/ShoppingList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Courses/Core/ShoppingList.swift; sourceTree = SOURCE_ROOT; };
-		C931C79178FCB76777B87F31 /* Courses/App/Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Courses/App/Store.swift; sourceTree = SOURCE_ROOT; };
+		184B59C24E4BB9B793D7E7E8 /* Caddie/App/CaddieApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/App/CaddieApp.swift; sourceTree = SOURCE_ROOT; };
+		38A007151ABE87CC01A5B6E9 /* Caddie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Caddie.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3C69F3F079F8CB3336B5CFDB /* Caddie/App/Intelligence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/App/Intelligence.swift; sourceTree = SOURCE_ROOT; };
+		5BAA074F0DCF79D47F5F8365 /* Caddie/App/ShoppingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/App/ShoppingView.swift; sourceTree = SOURCE_ROOT; };
+		A55291814477FA2C37C8EF9B /* Caddie/Core/ShoppingList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/Core/ShoppingList.swift; sourceTree = SOURCE_ROOT; };
+		C931C79178FCB76777B87F31 /* Caddie/App/Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/App/Store.swift; sourceTree = SOURCE_ROOT; };
+		D5C4D2A0A17A4A0C9E4D7B1F /* Caddie/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Caddie/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,11 +39,12 @@
 		64292B1C2B2E13EAD8788FC8 = {
 			isa = PBXGroup;
 			children = (
-				184B59C24E4BB9B793D7E7E8 /* Courses/App/CoursesApp.swift */,
-				3C69F3F079F8CB3336B5CFDB /* Courses/App/Intelligence.swift */,
-				5BAA074F0DCF79D47F5F8365 /* Courses/App/ShoppingView.swift */,
-				C931C79178FCB76777B87F31 /* Courses/App/Store.swift */,
-				A55291814477FA2C37C8EF9B /* Courses/Core/ShoppingList.swift */,
+				184B59C24E4BB9B793D7E7E8 /* Caddie/App/CaddieApp.swift */,
+				3C69F3F079F8CB3336B5CFDB /* Caddie/App/Intelligence.swift */,
+				5BAA074F0DCF79D47F5F8365 /* Caddie/App/ShoppingView.swift */,
+				C931C79178FCB76777B87F31 /* Caddie/App/Store.swift */,
+				A55291814477FA2C37C8EF9B /* Caddie/Core/ShoppingList.swift */,
+				D5C4D2A0A17A4A0C9E4D7B1F /* Caddie/Assets.xcassets */,
 				FBDC4F23F93125BBEEAE800C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -49,7 +52,7 @@
 		FBDC4F23F93125BBEEAE800C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				38A007151ABE87CC01A5B6E9 /* Courses.app */,
+				38A007151ABE87CC01A5B6E9 /* Caddie.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -57,9 +60,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		0E8A3AD980EC179856012B7E /* Courses */ = {
+		0E8A3AD980EC179856012B7E /* Caddie */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C57128001CE614BF8549D6BB /* Build configuration list for PBXNativeTarget "Courses" */;
+			buildConfigurationList = C57128001CE614BF8549D6BB /* Build configuration list for PBXNativeTarget "Caddie" */;
 			buildPhases = (
 				BCE16DD0260827ECF338C787 /* Sources */,
 				7561BFB015D8F536760CB671 /* Frameworks */,
@@ -69,9 +72,9 @@
 			);
 			dependencies = (
 			);
-			name = Courses;
-			productName = Courses;
-			productReference = 38A007151ABE87CC01A5B6E9 /* Courses.app */;
+			name = Caddie;
+			productName = Caddie;
+			productReference = 38A007151ABE87CC01A5B6E9 /* Caddie.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -83,7 +86,7 @@
 				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2660;
 			};
-			buildConfigurationList = 862894B703A6DEDF96A9DD6C /* Build configuration list for PBXProject "Courses" */;
+			buildConfigurationList = 862894B703A6DEDF96A9DD6C /* Build configuration list for PBXProject "Caddie" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = fr;
 			hasScannedForEncodings = 0;
@@ -96,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				0E8A3AD980EC179856012B7E /* Courses */,
+				0E8A3AD980EC179856012B7E /* Caddie */,
 			);
 		};
 /* End PBXProject section */
@@ -106,6 +109,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D5C4D2A1A17A4A0C9E4D7B1F /* Caddie/Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -116,11 +120,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5EAF599294DBCC66F505782A /* Courses/App/CoursesApp.swift in Sources */,
-				1872FA6B55F01812FA1CE52A /* Courses/App/Intelligence.swift in Sources */,
-				B9167B4BB43D224A97983F99 /* Courses/App/ShoppingView.swift in Sources */,
-				D3749FC3C1E782AA4F9A4371 /* Courses/App/Store.swift in Sources */,
-				FE928E0C6247409A51E5BD79 /* Courses/Core/ShoppingList.swift in Sources */,
+				5EAF599294DBCC66F505782A /* Caddie/App/CaddieApp.swift in Sources */,
+				1872FA6B55F01812FA1CE52A /* Caddie/App/Intelligence.swift in Sources */,
+				B9167B4BB43D224A97983F99 /* Caddie/App/ShoppingView.swift in Sources */,
+				D3749FC3C1E782AA4F9A4371 /* Caddie/App/Store.swift in Sources */,
+				FE928E0C6247409A51E5BD79 /* Caddie/Core/ShoppingList.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -134,14 +138,15 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YLBTRM8MH2;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Mes courses";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_CFBundleDisplayName = Caddie;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.shopping";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.valentin.courses;
-				PRODUCT_NAME = Courses;
+				PRODUCT_NAME = Caddie;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -155,14 +160,15 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YLBTRM8MH2;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Mes courses";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_CFBundleDisplayName = Caddie;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.shopping";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.valentin.courses;
-				PRODUCT_NAME = Courses;
+				PRODUCT_NAME = Caddie;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -194,7 +200,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		862894B703A6DEDF96A9DD6C /* Build configuration list for PBXProject "Courses" */ = {
+		862894B703A6DEDF96A9DD6C /* Build configuration list for PBXProject "Caddie" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				89E1FD6268CC0F221A2BE178 /* Debug */,
@@ -203,7 +209,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C57128001CE614BF8549D6BB /* Build configuration list for PBXNativeTarget "Courses" */ = {
+		C57128001CE614BF8549D6BB /* Build configuration list for PBXNativeTarget "Caddie" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7082CC0B6FC1282FCEABD07A /* Debug */,

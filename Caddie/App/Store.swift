@@ -11,6 +11,8 @@ final class Store {
     private let intelligence = Intelligence()
 
     init() {
+        // Keep the legacy container path so renaming the app does not discard an
+        // existing shopping list when the update is installed over Courses.
         let directory = URL.applicationSupportDirectory.appendingPathComponent("Courses", isDirectory: true)
         repository = LocalRepository(url: directory.appendingPathComponent("list.json"))
         do { list = try repository.load() }

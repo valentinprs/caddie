@@ -1,5 +1,5 @@
 import XCTest
-@testable import CoursesCore
+@testable import CaddieCore
 
 final class ShoppingListTests: XCTestCase {
     func testDuplicateIncludesPurchasedAndKnownPlural() throws {

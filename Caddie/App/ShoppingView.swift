@@ -13,7 +13,8 @@ struct ShoppingView: View {
     @State private var managing = false
     @State private var managementRequested = false
     @State private var editing: ListItem?
-    @State private var pendingEdit: ListItem?
+    @State private var editingFromDrawer: ListItem?
+    @State private var editingAisleIcon: Aisle?
     var body: some View {
         NavigationStack {
             List {
@@ -37,18 +38,29 @@ struct ShoppingView: View {
                 if !purchased.isEmpty {
                     Section {
                         ForEach(purchased) { item in row(item) }
-                        Button("Supprimer les éléments cochés", role: .destructive) {
+                        Button(role: .destructive) {
                             store.update { $0.items.removeAll(where: \.purchased) }
-                        }.font(.subheadline).tint(Color(uiColor: .systemRed))
+                        } label: {
+                            Label("Supprimer les éléments cochés", systemImage: "trash")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color(uiColor: .systemRed))
+                        .background(Color(uiColor: .systemRed).opacity(0.10), in: Capsule())
+                        .overlay { Capsule().stroke(Color(uiColor: .systemRed).opacity(0.16), lineWidth: 1) }
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 2, trailing: 10))
                     } header: {
-                        Label("Achetés · \(purchased.count)", systemImage: "checkmark.circle")
+                        ListSectionHeader(title: "Achetés", symbol: "checkmark.circle", count: purchased.count)
                     }
                 }
             }
             .scrollContentBackground(.hidden)
+            .listRowSeparator(.hidden)
+            .listSectionSpacing(16)
             .contentMargins(.bottom, addPanelPresented ? 112 : 0, for: .scrollContent)
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Mes courses")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Gérer les rayons", systemImage: "slider.horizontal.3") { showManagement() }
@@ -59,10 +71,11 @@ struct ShoppingView: View {
                 AddProductDrawer(
                     store: store,
                     selectedDetent: $addPanelDetent,
-                    managementPresented: $managementRequested
+                    managementPresented: $managementRequested,
+                    iconEditingAisle: $editingAisleIcon,
+                    productEditingItem: $editingFromDrawer
                 ) { item in
-                    pendingEdit = item
-                    addPanelPresented = false
+                    editingFromDrawer = item
                 }
                 .presentationSizing(.form)
                 .presentationDetents([AddPanelLayout.compact, .large], selection: $addPanelDetent)
@@ -84,7 +97,7 @@ struct ShoppingView: View {
             ) {
                 WelcomeView { store.update { $0.onboarded = true } }
             }
-            .alert("Mes courses", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
+            .alert("Caddie", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
                 Button("Compris", role: .cancel) { store.error = nil }
             } message: { Text(store.error ?? "") }
             .onAppear { restoreAddPanel() }
@@ -102,25 +115,21 @@ struct ShoppingView: View {
         }
     }
 
-    private func showEditor(_ item: ListItem) {
+    private func showEditor(_ itemID: UUID) {
+        guard let item = store.list.items.first(where: { $0.id == itemID }) else { return }
         if addPanelPresented {
-            pendingEdit = item
-            addPanelPresented = false
+            editingFromDrawer = item
         } else {
             editing = item
         }
     }
 
-    private func presentPendingDestination() {
-        if let pendingEdit {
-            self.pendingEdit = nil
-            editing = pendingEdit
-        }
+    private func showAisleIconEditor(_ aisle: Aisle) {
+        editingAisleIcon = aisle
     }
 
     private func dismissAddPanel() {
         addPanelDetent = AddPanelLayout.compact
-        presentPendingDestination()
     }
 
     private func restoreAddPanel() {
@@ -136,15 +145,22 @@ struct ShoppingView: View {
                 ForEach(items) { row($0) }
             } header: {
                 if let id {
-                    EditableAisleHeader(store: store, aisleID: id, count: items.count)
+                    if let aisle = store.list.aisles.first(where: { $0.id == id }) {
+                        EditableAisleHeader(store: store, aisleID: id, count: items.count) {
+                            showAisleIconEditor(aisle)
+                        }
+                    }
                 } else {
-                    HStack { Label(title, systemImage: symbol); Spacer(); Text("\(items.count)").monospacedDigit() }
+                    ListSectionHeader(title: title, symbol: symbol, count: items.count)
                 }
             }
         }
     }
     private func row(_ item: ListItem) -> some View {
-        ProductRow(store: store, item: item, edit: { showEditor(item) })
+        ProductRow(store: store, item: item, edit: { showEditor(item.id) })
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
             .swipeActions {
                 Button("Supprimer", systemImage: "trash", role: .destructive) {
                     store.update { $0.items.removeAll { $0.id == item.id } }
@@ -154,10 +170,32 @@ struct ShoppingView: View {
     }
 }
 
+private struct ListSectionHeader: View {
+    let title: String
+    let symbol: String
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: symbol)
+                .foregroundStyle(.secondary)
+                .frame(width: 40, height: 40)
+            Text(title)
+                .font(.body.weight(.semibold))
+                .frame(minHeight: 40, alignment: .leading)
+            Spacer(minLength: 4)
+            Text("\(count)").monospacedDigit()
+        }
+        .textCase(nil)
+        .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 0, trailing: 10))
+    }
+}
+
 private struct EditableAisleHeader: View {
     @Bindable var store: Store
     let aisleID: UUID
     let count: Int
+    let editIcon: () -> Void
     @FocusState private var nameFocused: Bool
     @State private var draftName = ""
 
@@ -166,26 +204,23 @@ private struct EditableAisleHeader: View {
     var body: some View {
         HStack(spacing: 8) {
             if let aisle {
-                Menu {
-                    ForEach(AisleSymbolCatalog.choices, id: \.symbol) { choice in
-                        Button {
-                            store.update { try $0.editAisle(aisleID, name: aisle.name, symbol: choice.symbol) }
-                        } label: {
-                            Label(choice.label, systemImage: choice.symbol)
-                        }
-                    }
-                } label: {
+                Button(action: editIcon) {
                     Image(systemName: aisle.symbol)
-                        .frame(width: 28, height: 28)
+                        .foregroundStyle(aisle.iconColor.color)
+                        .frame(width: 40, height: 40)
                         .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Modifier l’icône de \(aisle.name)")
 
                 TextField("Nom du rayon", text: $draftName)
                     .focused($nameFocused)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.body.weight(.semibold))
+                    .textFieldStyle(.plain)
                     .textInputAutocapitalization(.sentences)
                     .submitLabel(.done)
+                    .frame(maxWidth: .infinity, minHeight: 40, maxHeight: 40, alignment: .leading)
+                    .layoutPriority(1)
                     .onSubmit(commitName)
                     .onChange(of: nameFocused) { _, focused in if !focused { commitName() } }
                     .onChange(of: aisle.name) { _, name in if !nameFocused { draftName = name } }
@@ -193,6 +228,7 @@ private struct EditableAisleHeader: View {
                 Text("\(count)").monospacedDigit()
             }
         }
+        .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 0, trailing: 10))
         .onAppear { draftName = aisle?.name ?? "" }
     }
 
@@ -208,39 +244,86 @@ private struct ProductRow: View {
     @Bindable var store: Store
     let item: ListItem
     let edit: () -> Void
+    @FocusState private var nameFocused: Bool
     @FocusState private var noteFocused: Bool
+    @State private var draftName: String
     @State private var draftNote: String
 
     init(store: Store, item: ListItem, edit: @escaping () -> Void) {
         self.store = store
         self.item = item
         self.edit = edit
+        _draftName = State(initialValue: store.list.product(item.productID)?.name ?? "")
         _draftNote = State(initialValue: item.note)
+    }
+
+    private var currentItem: ListItem? {
+        store.list.items.first { $0.id == item.id }
+    }
+
+    private var currentProductName: String {
+        guard let currentItem else { return "Produit" }
+        return store.list.product(currentItem.productID)?.name ?? "Produit"
+    }
+
+    private var isEditing: Bool {
+        nameFocused || noteFocused
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
+            HStack(alignment: .top, spacing: 8) {
                 Button { store.update { $0.toggle(item.id) } } label: {
                     Image(systemName: item.purchased ? "checkmark.circle.fill" : "circle")
                         .font(.title3)
                         .foregroundStyle(item.purchased ? Color.primary : Color.secondary)
-                        .frame(width: 34, height: 34)
+                        // The product field uses the same fixed height, which
+                        // keeps the visible name optically centered on this icon.
+                        .frame(width: 40, height: 40)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(item.purchased ? "Remettre à acheter" : "Marquer acheté")
                 .accessibilityValue(store.list.product(item.productID)?.name ?? "Produit")
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Button(action: edit) {
-                        Text(store.list.product(item.productID)?.name ?? "Produit")
-                            .font(.body.weight(.medium))
+                // Bring the secondary line closer without tying its position
+                // to either focus state.
+                VStack(alignment: .leading, spacing: -6) {
+                    HStack(spacing: 8) {
+                        TextField("Produit", text: $draftName)
+                            .font(.subheadline.weight(.medium))
                             .strikethrough(item.purchased)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                             .foregroundStyle(item.purchased ? .secondary : .primary)
+                            .focused($nameFocused)
+                            .textInputAutocapitalization(.sentences)
+                            .submitLabel(.done)
+                            .onSubmit(commitName)
+                            .onChange(of: nameFocused) { _, focused in
+                                if !focused { commitName() }
+                            }
+                            .onChange(of: currentProductName) { _, name in
+                                if !nameFocused { draftName = name }
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 40, maxHeight: 40)
+
+                        // Reserve this slot in every state. Showing the icon
+                        // must not change the row's width or height.
+                        Button {
+                            commitName()
+                            edit()
+                        } label: {
+                            Image(systemName: "info.circle")
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 40, height: 40)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .opacity(isEditing ? 1 : 0)
+                        .allowsHitTesting(isEditing)
+                        .accessibilityHidden(!isEditing)
+                        .accessibilityLabel("Modifier le produit")
                     }
-                    .buttonStyle(.plain)
 
                     TextField("Quantité ou précision", text: $draftNote)
                         .focused($noteFocused)
@@ -250,6 +333,7 @@ private struct ProductRow: View {
                         .onSubmit(commitNote)
                         .onChange(of: noteFocused) { _, focused in if !focused { commitNote() } }
                         .onChange(of: item.note) { _, note in if !noteFocused { draftNote = note } }
+                        .frame(maxWidth: .infinity, minHeight: 28, maxHeight: 28)
                 }
 
                 if store.classifying.contains(item.id) {
@@ -267,10 +351,25 @@ private struct ProductRow: View {
                         .buttonStyle(.borderless)
                         .frame(width: 34, height: 34)
                 }
-                .padding(.leading, 40)
+                .padding(.leading, 42)
             }
         }
         .padding(.vertical, 0)
+        .animation(.smooth(duration: 0.2), value: isEditing)
+    }
+
+    private func commitName() {
+        guard let currentItem,
+              let currentProduct = store.list.product(currentItem.productID) else { return }
+        let cleanedName = ShoppingList.clean(draftName)
+        guard !cleanedName.isEmpty else {
+            draftName = currentProduct.name
+            return
+        }
+        guard cleanedName != currentProduct.name else { return }
+        store.error = nil
+        store.update { try $0.edit(item.id, name: cleanedName, note: currentItem.note) }
+        if store.error != nil { draftName = currentProduct.name }
     }
 
     private func commitNote() {
@@ -291,6 +390,10 @@ private struct SheetVisualCentering: UIViewRepresentable {
             guard let controller = view.parentViewController?.presentationController as? UISheetPresentationController else { return }
             let presenter = controller.presentingViewController.view
             controller.sourceView = presenter
+            // The compact drawer already has a clear surface boundary; removing
+            // the system drop shadow keeps it visually part of the list.
+            controller.presentedView?.layer.shadowOpacity = 0
+            controller.presentedView?.layer.shadowRadius = 0
         }
     }
 }
@@ -310,6 +413,8 @@ struct AddProductDrawer: View {
     @Bindable var store: Store
     @Binding var selectedDetent: PresentationDetent
     @Binding var managementPresented: Bool
+    @Binding var iconEditingAisle: Aisle?
+    @Binding var productEditingItem: ListItem?
     var openExisting: (ListItem) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private enum Field: Hashable { case name }
@@ -361,6 +466,12 @@ struct AddProductDrawer: View {
         }
         .sheet(isPresented: $managementPresented) {
             AislesView(store: store)
+        }
+        .sheet(item: $iconEditingAisle) { aisle in
+            EditAisleIconView(store: store, aisle: aisle)
+        }
+        .sheet(item: $productEditingItem) { item in
+            EditProductView(store: store, item: item)
         }
     }
 
@@ -546,7 +657,14 @@ struct AislesView: View {
                 Section {
                     ForEach(store.list.aisles) { aisle in
                         Button { editingAisle = aisle } label: {
-                            Label(aisle.name, systemImage: aisle.symbol).foregroundStyle(.primary).frame(minHeight: 36)
+                            HStack(spacing: 12) {
+                                Image(systemName: aisle.symbol)
+                                    .foregroundStyle(aisle.iconColor.color)
+                                    .frame(width: 24)
+                                Text(aisle.name).foregroundStyle(.primary)
+                                Spacer()
+                            }
+                            .frame(minHeight: 36)
                         }
                     }
                     .onMove { source, destination in store.update { $0.aisles.move(fromOffsets: source, toOffset: destination) } }
@@ -582,12 +700,162 @@ private enum AisleSymbolCatalog {
         ("pills", "Pharmacie"), ("cross.case", "Premiers secours"),
         ("book", "Librairie"), ("gamecontroller", "Loisirs"),
         ("camera", "Photo"), ("paintpalette", "Créatif"),
-        ("scissors", "Mercerie"), ("hammer", "Bricolage"),
-        ("wrench.and.screwdriver", "Outillage"), ("lightbulb", "Éclairage"),
-        ("washer", "Linge"), ("bed.double", "Chambre"),
-        ("figure.walk", "Sport"), ("bicycle", "Vélo"),
-        ("fuelpump", "Carburant"), ("shippingbox", "Colis")
+        ("washer", "Linge"), ("shippingbox", "Colis")
     ]
+}
+
+private extension AisleIconColor {
+    var color: Color {
+        switch self {
+        case .primary: .primary
+        case .orange: Color(uiColor: .systemOrange)
+        case .yellow: Color(uiColor: .systemYellow)
+        case .green: Color(uiColor: .systemGreen)
+        case .mint: Color(uiColor: .systemMint)
+        case .teal: Color(uiColor: .systemTeal)
+        case .cyan: Color(uiColor: .systemCyan)
+        case .blue: Color(uiColor: .systemBlue)
+        case .indigo: Color(uiColor: .systemIndigo)
+        case .purple: Color(uiColor: .systemPurple)
+        case .pink: Color(uiColor: .systemPink)
+        case .red: Color(uiColor: .systemRed)
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .primary: "Système"
+        case .orange: "Orange"
+        case .yellow: "Jaune"
+        case .green: "Vert"
+        case .mint: "Menthe"
+        case .teal: "Turquoise"
+        case .cyan: "Cyan"
+        case .blue: "Bleu"
+        case .indigo: "Indigo"
+        case .purple: "Violet"
+        case .pink: "Rose"
+        case .red: "Rouge"
+        }
+    }
+}
+
+private struct AisleIconGrid: View {
+    @Binding var symbol: String
+    let iconColor: AisleIconColor
+
+    var body: some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 5),
+            spacing: 12
+        ) {
+            ForEach(AisleSymbolCatalog.choices, id: \.symbol) { choice in
+                Button { symbol = choice.symbol } label: {
+                    Image(systemName: choice.symbol)
+                        .font(.title2)
+                        .foregroundStyle(iconColor.color)
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(
+                            symbol == choice.symbol ? iconColor.color.opacity(0.14) : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 14)
+                        )
+                        .overlay(alignment: .topTrailing) {
+                            if symbol == choice.symbol {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(iconColor.color)
+                                    .padding(5)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(choice.label)
+                .accessibilityAddTraits(symbol == choice.symbol ? .isSelected : [])
+            }
+        }
+    }
+}
+
+private struct AisleColorPalette: View {
+    @Binding var selection: AisleIconColor
+
+    var body: some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 6),
+            spacing: 12
+        ) {
+            ForEach(AisleIconColor.allCases) { color in
+                Button { selection = color } label: {
+                    Circle()
+                        .fill(color.color)
+                        .frame(width: 32, height: 32)
+                        .overlay {
+                            if selection == color {
+                                Circle()
+                                    .stroke(Color.primary, lineWidth: 2)
+                                    .padding(-5)
+                            }
+                        }
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(color.label)
+                .accessibilityAddTraits(selection == color ? .isSelected : [])
+            }
+        }
+    }
+}
+
+struct EditAisleIconView: View {
+    @Bindable var store: Store
+    @Environment(\.dismiss) private var dismiss
+    @State private var symbol: String
+    @State private var iconColor: AisleIconColor
+    private let aisle: Aisle
+
+    init(store: Store, aisle: Aisle) {
+        self.store = store
+        self.aisle = aisle
+        _symbol = State(initialValue: aisle.symbol)
+        _iconColor = State(initialValue: aisle.iconColor)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Icône")
+                        .font(.headline)
+                    AisleIconGrid(symbol: $symbol, iconColor: iconColor)
+
+                    Text("Couleur de l’icône")
+                        .font(.headline)
+                        .padding(.top, 8)
+                    AisleColorPalette(selection: $iconColor)
+                }
+                .padding(20)
+            }
+            .scrollIndicators(.hidden)
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle(aisle.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuler") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Enregistrer") {
+                        store.error = nil
+                        store.update { try $0.editAisleIcon(aisle.id, symbol: symbol, iconColor: iconColor) }
+                        if store.error == nil { dismiss() }
+                    }
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(32)
+    }
 }
 
 struct EditAisleView: View {
@@ -654,7 +922,13 @@ struct WelcomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                Image(systemName: "basket.fill").font(.system(size: 56)).foregroundStyle(.tint).padding(.top, 40)
+                Image("CaddieLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 92, height: 92)
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .shadow(color: .black.opacity(0.14), radius: 14, y: 8)
+                    .padding(.top, 24)
                 Text("Moins d’allers-retours.\nPlus de simplicité.")
                     .font(.largeTitle.weight(.medium))
                 Text("Vos courses, rangées comme vous les faites.").font(.title3).foregroundStyle(.secondary)
