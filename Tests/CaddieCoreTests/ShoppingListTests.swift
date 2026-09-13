@@ -19,6 +19,13 @@ final class ShoppingListTests: XCTestCase {
         XCTAssertEqual(list.matching("Tomates")?.preferredAisle, list.aisles.first { $0.name == "Fruits et légumes" }?.id)
         XCTAssertEqual(list.matching("Tomates en conserve")?.preferredAisle, list.aisles.first { $0.name == "Épicerie" }?.id)
     }
+    func testDefaultAislesUseTheLucideCatalog() {
+        XCTAssertEqual(
+            ShoppingList.initial().aisles.map(\.icon),
+            [.carrot, .beef, .fish, .ham, .eggFried, .croissant, .wheat, .snowflake, .milk, .soapDispenserDroplet]
+        )
+        XCTAssertEqual(AisleIcon.allCases.count, 10)
+    }
     func testManualPreferenceSurvivesReadditionIncludingUnclassified() throws {
         var list = ShoppingList.initial()
         let id = try list.add(name: "Bavette", note: "")
@@ -155,7 +162,7 @@ final class ShoppingListTests: XCTestCase {
         let id = try list.add(name: "Bavette", note: "2 pièces")
         list.assign(id, aisle: list.aisles[1].id)
         list.onboarded = true
-        try list.editAisle(list.aisles[1].id, name: "Viandes", symbol: "basket")
+        try list.editAisle(list.aisles[1].id, name: "Viandes", icon: .beef)
         try repository.save(list)
         XCTAssertEqual(try repository.load(), list)
         let corrupt = Data("broken".utf8)
@@ -200,16 +207,32 @@ final class ShoppingListTests: XCTestCase {
         let items = list.items
         let products = list.products
         let order = list.aisles.map(\.id)
-        try list.editAisle(aisle, name: "Viandes", symbol: "basket")
-        XCTAssertEqual(list.aisles[1].symbol, "basket")
+        try list.editAisle(aisle, name: "Viandes", icon: .ham)
+        XCTAssertEqual(list.aisles[1].icon, .ham)
         XCTAssertEqual(list.aisles[1].name, "Viandes")
         XCTAssertEqual(list.aisles.map(\.id), order)
         XCTAssertEqual(list.items, items)
         XCTAssertEqual(list.products, products)
         let before = list
-        XCTAssertThrowsError(try list.editAisle(aisle, name: "Boissons", symbol: "fish"))
-        XCTAssertThrowsError(try list.editAisle(aisle, name: " ", symbol: "fish"))
-        XCTAssertThrowsError(try list.editAisle(UUID(), name: "Viandes", symbol: "fish"))
+        XCTAssertThrowsError(try list.editAisle(aisle, name: "Boissons", icon: .fish))
+        XCTAssertThrowsError(try list.editAisle(aisle, name: " ", icon: .fish))
+        XCTAssertThrowsError(try list.editAisle(UUID(), name: "Viandes", icon: .fish))
         XCTAssertEqual(list, before)
+    }
+    func testLegacySFSymbolsMigrateToLucideIcons() throws {
+        let data = Data("""
+        {"id":"\(UUID().uuidString)","name":"Charcuterie","symbol":"fork.knife","iconColor":"yellow"}
+        """.utf8)
+        let aisle = try JSONDecoder().decode(Aisle.self, from: data)
+        XCTAssertEqual(aisle.icon, .ham)
+        XCTAssertEqual(aisle.iconColor, .yellow)
+    }
+
+    func testLegacyIconColorsMigrateToTheNewPalette() throws {
+        let primary = try JSONDecoder().decode(AisleIconColor.self, from: Data("\"primary\"".utf8))
+        let mint = try JSONDecoder().decode(AisleIconColor.self, from: Data("\"mint\"".utf8))
+        XCTAssertEqual(primary, .monochrome)
+        XCTAssertEqual(mint, .emerald)
+        XCTAssertEqual(AisleIconColor.allCases.count, 18)
     }
 }

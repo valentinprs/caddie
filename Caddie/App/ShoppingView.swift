@@ -1,6 +1,20 @@
 import SwiftUI
 import UIKit
 
+private struct AisleIconView: View {
+    let icon: AisleIcon
+    var size: CGFloat = 24
+
+    var body: some View {
+        Image("lucide-\(icon.rawValue)")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+    }
+}
+
 private enum AddPanelLayout {
     static let compact: PresentationDetent = .height(76)
 }
@@ -32,7 +46,7 @@ struct ShoppingView: View {
                 }
                 aisleSection(id: nil, title: "À classer", symbol: "tray")
                 ForEach(store.list.aisles) { aisle in
-                    aisleSection(id: aisle.id, title: aisle.name, symbol: aisle.symbol)
+                    aisleSection(id: aisle.id, title: aisle.name, symbol: "tray")
                 }
                 let purchased = store.list.items.filter(\.purchased)
                 if !purchased.isEmpty {
@@ -205,7 +219,7 @@ private struct EditableAisleHeader: View {
         HStack(spacing: 8) {
             if let aisle {
                 Button(action: editIcon) {
-                    Image(systemName: aisle.symbol)
+                    AisleIconView(icon: aisle.icon)
                         .foregroundStyle(aisle.iconColor.color)
                         .frame(width: 40, height: 40)
                         .contentShape(Rectangle())
@@ -519,9 +533,7 @@ struct AddProductDrawer: View {
                     ForEach(suggestions) { product in
                         let item = store.list.items.first { $0.productID == product.id }
                         let aisleID = item?.aisleID ?? product.preferredAisle
-                        let aisleSymbol = aisleID.flatMap { id in
-                            store.list.aisles.first { $0.id == id }?.symbol
-                        } ?? "basket"
+                        let aisle = aisleID.flatMap { id in store.list.aisles.first { $0.id == id } }
                         Button {
                             if let item {
                                 focused = nil
@@ -531,10 +543,16 @@ struct AddProductDrawer: View {
                             }
                         } label: {
                             HStack(spacing: 14) {
-                                Image(systemName: aisleSymbol)
-                                    .font(.title3)
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 24)
+                                if let aisle {
+                                    AisleIconView(icon: aisle.icon, size: 20)
+                                        .foregroundStyle(aisle.iconColor.color)
+                                        .frame(width: 24)
+                                } else {
+                                    Image(systemName: "basket")
+                                        .font(.title3)
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 24)
+                                }
                                 Text(product.name).foregroundStyle(.primary)
                                 Spacer()
                                 if let item {
@@ -658,7 +676,7 @@ struct AislesView: View {
                     ForEach(store.list.aisles) { aisle in
                         Button { editingAisle = aisle } label: {
                             HStack(spacing: 12) {
-                                Image(systemName: aisle.symbol)
+                                AisleIconView(icon: aisle.icon, size: 20)
                                     .foregroundStyle(aisle.iconColor.color)
                                     .frame(width: 24)
                                 Text(aisle.name).foregroundStyle(.primary)
@@ -687,61 +705,113 @@ struct AislesView: View {
     }
 }
 
-private enum AisleSymbolCatalog {
-    static let choices: [(symbol: String, label: String)] = [
-        ("basket", "Panier"), ("carrot", "Légumes"), ("leaf", "Feuille"),
-        ("fork.knife", "Couverts"), ("fish", "Poisson"), ("refrigerator", "Réfrigérateur"),
-        ("birthday.cake", "Gâteau"), ("cabinet", "Épicerie"), ("snowflake", "Surgelés"),
-        ("waterbottle", "Bouteille"), ("cup.and.saucer", "Café"), ("wineglass", "Verre"),
-        ("bubbles.and.sparkles", "Entretien"), ("shower", "Hygiène"),
-        ("pawprint", "Animaux"), ("heart", "Santé"), ("tshirt", "Vêtements"),
-        ("car", "Voiture"), ("house", "Maison"), ("gift", "Cadeaux"),
-        ("takeoutbag.and.cup.and.straw", "À emporter"), ("cart", "Panier"),
-        ("pills", "Pharmacie"), ("cross.case", "Premiers secours"),
-        ("book", "Librairie"), ("gamecontroller", "Loisirs"),
-        ("camera", "Photo"), ("paintpalette", "Créatif"),
-        ("washer", "Linge"), ("shippingbox", "Colis")
-    ]
+private extension AisleIcon {
+    var label: String {
+        switch self {
+        case .carrot: "Carotte"
+        case .beef: "Viande"
+        case .ham: "Jambon"
+        case .milk: "Lait"
+        case .eggFried: "Œuf au plat"
+        case .fish: "Poisson"
+        case .wheat: "Blé"
+        case .croissant: "Croissant"
+        case .snowflake: "Flocon"
+        case .soapDispenserDroplet: "Distributeur de savon"
+        }
+    }
 }
 
 private extension AisleIconColor {
     var color: Color {
         switch self {
-        case .primary: .primary
-        case .orange: Color(uiColor: .systemOrange)
-        case .yellow: Color(uiColor: .systemYellow)
-        case .green: Color(uiColor: .systemGreen)
-        case .mint: Color(uiColor: .systemMint)
-        case .teal: Color(uiColor: .systemTeal)
-        case .cyan: Color(uiColor: .systemCyan)
-        case .blue: Color(uiColor: .systemBlue)
-        case .indigo: Color(uiColor: .systemIndigo)
-        case .purple: Color(uiColor: .systemPurple)
-        case .pink: Color(uiColor: .systemPink)
-        case .red: Color(uiColor: .systemRed)
+        case .monochrome: Self.adaptive(light: .init(0, 0, 0), dark: .init(1, 0, 0))
+        case .amber: Self.adaptive(light: .init(0.555, 0.163, 48.998), dark: .init(0.473, 0.137, 46.201))
+        case .blue: Self.adaptive(light: .init(0.488, 0.243, 264.376), dark: .init(0.424, 0.199, 265.638))
+        case .cyan: Self.adaptive(light: .init(0.52, 0.105, 223.128), dark: .init(0.45, 0.085, 224.283))
+        case .emerald: Self.adaptive(light: .init(0.508, 0.118, 165.612), dark: .init(0.432, 0.095, 166.913))
+        case .fuchsia: Self.adaptive(light: .init(0.518, 0.253, 323.949), dark: .init(0.452, 0.211, 324.591))
+        case .green: Self.adaptive(light: .init(0.527, 0.154, 150.069), dark: .init(0.448, 0.119, 151.328))
+        case .indigo: Self.adaptive(light: .init(0.457, 0.24, 277.023), dark: .init(0.398, 0.195, 277.366))
+        case .lime: Self.adaptive(light: .init(0.841, 0.238, 128.85), dark: .init(0.768, 0.233, 130.85))
+        case .orange: Self.adaptive(light: .init(0.553, 0.195, 38.402), dark: .init(0.47, 0.157, 37.304))
+        case .pink: Self.adaptive(light: .init(0.525, 0.223, 3.958), dark: .init(0.459, 0.187, 3.815))
+        case .purple: Self.adaptive(light: .init(0.496, 0.265, 301.924), dark: .init(0.438, 0.218, 303.724))
+        case .red: Self.adaptive(light: .init(0.505, 0.213, 27.518), dark: .init(0.444, 0.177, 26.899))
+        case .rose: Self.adaptive(light: .init(0.514, 0.222, 16.935), dark: .init(0.455, 0.188, 13.697))
+        case .sky: Self.adaptive(light: .init(0.5, 0.134, 242.749), dark: .init(0.443, 0.11, 240.79))
+        case .teal: Self.adaptive(light: .init(0.511, 0.096, 186.391), dark: .init(0.437, 0.078, 188.216))
+        case .violet: Self.adaptive(light: .init(0.491, 0.27, 292.581), dark: .init(0.432, 0.232, 292.759))
+        case .yellow: Self.adaptive(light: .init(0.852, 0.199, 91.936), dark: .init(0.795, 0.184, 86.047))
         }
+    }
+
+    private static func adaptive(light: Oklch, dark: Oklch) -> Color {
+        Color(uiColor: UIColor { traits in
+            UIColor(oklch: traits.userInterfaceStyle == .dark ? dark : light)
+        })
     }
 
     var label: String {
         switch self {
-        case .primary: "Système"
-        case .orange: "Orange"
-        case .yellow: "Jaune"
-        case .green: "Vert"
-        case .mint: "Menthe"
-        case .teal: "Turquoise"
-        case .cyan: "Cyan"
+        case .monochrome: "Noir et blanc"
+        case .amber: "Ambre"
         case .blue: "Bleu"
+        case .cyan: "Cyan"
+        case .emerald: "Émeraude"
+        case .fuchsia: "Fuchsia"
+        case .green: "Vert"
         case .indigo: "Indigo"
-        case .purple: "Violet"
+        case .lime: "Citron vert"
+        case .orange: "Orange"
         case .pink: "Rose"
+        case .purple: "Pourpre"
         case .red: "Rouge"
+        case .rose: "Rose foncé"
+        case .sky: "Bleu ciel"
+        case .teal: "Sarcelle"
+        case .violet: "Violet"
+        case .yellow: "Jaune"
         }
     }
 }
 
+private struct Oklch {
+    let lightness: Double
+    let chroma: Double
+    let hue: Double
+
+    init(_ lightness: Double, _ chroma: Double, _ hue: Double) {
+        self.lightness = lightness
+        self.chroma = chroma
+        self.hue = hue
+    }
+}
+
+private extension UIColor {
+    convenience init(oklch color: Oklch) {
+        let hue = color.hue * .pi / 180
+        let a = color.chroma * cos(hue)
+        let b = color.chroma * sin(hue)
+        let l = pow(color.lightness + 0.3963377774 * a + 0.2158037573 * b, 3)
+        let m = pow(color.lightness - 0.1055613458 * a - 0.0638541728 * b, 3)
+        let s = pow(color.lightness - 0.0894841775 * a - 1.2914855480 * b, 3)
+        self.init(
+            red: Self.sRGB(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+            green: Self.sRGB(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+            blue: Self.sRGB(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s),
+            alpha: 1
+        )
+    }
+
+    private static func sRGB(_ linear: Double) -> CGFloat {
+        let value = linear <= 0.0031308 ? 12.92 * linear : 1.055 * pow(linear, 1 / 2.4) - 0.055
+        return CGFloat(min(max(value, 0), 1))
+    }
+}
+
 private struct AisleIconGrid: View {
-    @Binding var symbol: String
+    @Binding var icon: AisleIcon
     let iconColor: AisleIconColor
 
     var body: some View {
@@ -749,18 +819,18 @@ private struct AisleIconGrid: View {
             columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 5),
             spacing: 12
         ) {
-            ForEach(AisleSymbolCatalog.choices, id: \.symbol) { choice in
-                Button { symbol = choice.symbol } label: {
-                    Image(systemName: choice.symbol)
-                        .font(.title2)
+            ForEach(AisleIcon.allCases) { choice in
+                Button { icon = choice } label: {
+                    AisleIconView(icon: choice, size: 24)
                         .foregroundStyle(iconColor.color)
                         .frame(maxWidth: .infinity, minHeight: 56)
-                        .background(
-                            symbol == choice.symbol ? iconColor.color.opacity(0.14) : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 14)
-                        )
+                        .background(Color.clear, in: RoundedRectangle(cornerRadius: 14))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(icon == choice ? Color.primary.opacity(0.22) : Color.clear, lineWidth: 1)
+                        }
                         .overlay(alignment: .topTrailing) {
-                            if symbol == choice.symbol {
+                            if icon == choice {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.caption)
                                     .foregroundStyle(iconColor.color)
@@ -770,7 +840,7 @@ private struct AisleIconGrid: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(choice.label)
-                .accessibilityAddTraits(symbol == choice.symbol ? .isSelected : [])
+                .accessibilityAddTraits(icon == choice ? .isSelected : [])
             }
         }
     }
@@ -809,14 +879,14 @@ private struct AisleColorPalette: View {
 struct EditAisleIconView: View {
     @Bindable var store: Store
     @Environment(\.dismiss) private var dismiss
-    @State private var symbol: String
+    @State private var icon: AisleIcon
     @State private var iconColor: AisleIconColor
     private let aisle: Aisle
 
     init(store: Store, aisle: Aisle) {
         self.store = store
         self.aisle = aisle
-        _symbol = State(initialValue: aisle.symbol)
+        _icon = State(initialValue: aisle.icon)
         _iconColor = State(initialValue: aisle.iconColor)
     }
 
@@ -826,7 +896,7 @@ struct EditAisleIconView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     Text("Icône")
                         .font(.headline)
-                    AisleIconGrid(symbol: $symbol, iconColor: iconColor)
+                    AisleIconGrid(icon: $icon, iconColor: iconColor)
 
                     Text("Couleur de l’icône")
                         .font(.headline)
@@ -846,7 +916,7 @@ struct EditAisleIconView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Enregistrer") {
                         store.error = nil
-                        store.update { try $0.editAisleIcon(aisle.id, symbol: symbol, iconColor: iconColor) }
+                        store.update { try $0.editAisleIcon(aisle.id, icon: icon, iconColor: iconColor) }
                         if store.error == nil { dismiss() }
                     }
                 }
@@ -862,13 +932,13 @@ struct EditAisleView: View {
     @Bindable var store: Store
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
-    @State private var symbol: String
+    @State private var icon: AisleIcon
     private let aisle: Aisle
     init(store: Store, aisle: Aisle) {
         self.store = store
         self.aisle = aisle
         _name = State(initialValue: aisle.name)
-        _symbol = State(initialValue: aisle.symbol)
+        _icon = State(initialValue: aisle.icon)
     }
 
     var body: some View {
@@ -877,25 +947,24 @@ struct EditAisleView: View {
                 Section("Nom du rayon") { TextField("Nom", text: $name) }
                 Section("Icône") {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 64))], spacing: 12) {
-                        ForEach(AisleSymbolCatalog.choices, id: \.symbol) { choice in
-                            Button { symbol = choice.symbol } label: {
-                                Image(systemName: choice.symbol)
-                                    .font(.title2)
+                        ForEach(AisleIcon.allCases) { choice in
+                            Button { icon = choice } label: {
+                                AisleIconView(icon: choice, size: 24)
                                     .foregroundStyle(.primary)
                                     .frame(maxWidth: .infinity, minHeight: 56)
                                     .background(
-                                        symbol == choice.symbol ? Color.primary.opacity(0.12) : Color.clear,
+                                        icon == choice ? Color.primary.opacity(0.12) : Color.clear,
                                         in: RoundedRectangle(cornerRadius: 12)
                                     )
                                     .overlay(alignment: .topTrailing) {
-                                        if symbol == choice.symbol {
+                                        if icon == choice {
                                             Image(systemName: "checkmark.circle.fill").font(.caption)
                                         }
                                     }
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(choice.label)
-                            .accessibilityAddTraits(symbol == choice.symbol ? .isSelected : [])
+                            .accessibilityAddTraits(icon == choice ? .isSelected : [])
                         }
                     }.padding(.vertical, 8)
                 }
@@ -908,7 +977,7 @@ struct EditAisleView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Enregistrer") {
                         store.error = nil
-                        store.update { try $0.editAisle(aisle.id, name: name, symbol: symbol) }
+                        store.update { try $0.editAisle(aisle.id, name: name, icon: icon) }
                         if store.error == nil { dismiss() }
                     }.disabled(ShoppingList.clean(name).isEmpty)
                 }
@@ -933,9 +1002,9 @@ struct WelcomeView: View {
                     .font(.largeTitle.weight(.medium))
                 Text("Vos courses, rangées comme vous les faites.").font(.title3).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 24) {
-                    example("Bavette", detail: "2 pièces · Boucherie", symbol: "fork.knife")
-                    example("Tomates", detail: "500 g · Fruits et légumes", symbol: "carrot")
-                    example("Dentifrice", detail: "1 tube · Hygiène et entretien", symbol: "bubbles.and.sparkles")
+                    example("Bavette", detail: "2 pièces · Boucherie", icon: .beef)
+                    example("Tomates", detail: "500 g · Fruits et légumes", icon: .carrot)
+                    example("Dentifrice", detail: "1 tube · Hygiène et entretien", icon: .soapDispenserDroplet)
                 }.padding(24).frame(maxWidth: .infinity, alignment: .leading).background(.background, in: RoundedRectangle(cornerRadius: 24))
                 Text("Dix rayons pour commencer, à adapter à votre parcours. Le classement automatique utilise Apple Intelligence lorsqu’il est disponible. Vous gardez toujours la main.")
                     .foregroundStyle(.secondary)
@@ -946,9 +1015,9 @@ struct WelcomeView: View {
             }.padding(28)
         }.background(Color(.systemGroupedBackground)).interactiveDismissDisabled()
     }
-    private func example(_ title: String, detail: String, symbol: String) -> some View {
+    private func example(_ title: String, detail: String, icon: AisleIcon) -> some View {
         HStack(spacing: 16) {
-            Image(systemName: symbol).font(.title2).foregroundStyle(.tint).frame(width: 32)
+            AisleIconView(icon: icon, size: 26).foregroundStyle(.tint).frame(width: 32)
             VStack(alignment: .leading, spacing: 4) { Text(title).font(.headline); Text(detail).font(.subheadline).foregroundStyle(.secondary) }
         }
     }
