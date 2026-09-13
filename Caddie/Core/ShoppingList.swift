@@ -1,36 +1,87 @@
 import Foundation
 
 enum AisleIconColor: String, Codable, CaseIterable, Identifiable {
-    case primary
-    case orange
-    case yellow
-    case green
-    case mint
-    case teal
-    case cyan
+    case monochrome
+    case amber
     case blue
+    case cyan
+    case emerald
+    case fuchsia
+    case green
     case indigo
-    case purple
+    case lime
+    case orange
     case pink
+    case purple
     case red
+    case rose
+    case sky
+    case teal
+    case violet
+    case yellow
 
     var id: Self { self }
+
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self)
+        switch value {
+        case "primary": self = .monochrome
+        case "mint": self = .emerald
+        default:
+            guard let color = Self(rawValue: value) else {
+                throw DecodingError.dataCorruptedError(in: try decoder.singleValueContainer(), debugDescription: "Couleur d’icône inconnue : \(value)")
+            }
+            self = color
+        }
+    }
+}
+
+enum AisleIcon: String, Codable, CaseIterable, Identifiable {
+    case carrot
+    case beef
+    case ham
+    case milk
+    case eggFried = "egg-fried"
+    case fish
+    case wheat
+    case croissant
+    case snowflake
+    case soapDispenserDroplet = "soap-dispenser-droplet"
+
+    var id: Self { self }
+
+    static func migrated(from symbol: String?, aisleName: String) -> Self {
+        if let symbol, let icon = Self(rawValue: symbol) { return icon }
+        switch symbol {
+        case "carrot", "leaf": return .carrot
+        case "fork.knife": return aisleName == "Charcuterie" ? .ham : .beef
+        case "fish": return .fish
+        case "refrigerator": return .eggFried
+        case "birthday.cake": return .croissant
+        case "cabinet": return .wheat
+        case "waterbottle", "cup.and.saucer", "wineglass": return .milk
+        case "bubbles.and.sparkles", "shower", "washer": return .soapDispenserDroplet
+        case "snowflake": return .snowflake
+        default: return .wheat
+        }
+    }
 }
 
 struct Aisle: Identifiable, Codable, Equatable {
     var id = UUID()
     var name: String
-    var symbol: String = "basket"
-    var iconColor: AisleIconColor = .primary
+    var icon: AisleIcon = .wheat
+    var iconColor: AisleIconColor = .monochrome
 
+    // Keep the legacy "symbol" key so existing local files remain readable.
     private enum CodingKeys: String, CodingKey {
         case id, name, symbol, iconColor
     }
 
-    init(id: UUID = UUID(), name: String, symbol: String = "basket", iconColor: AisleIconColor = .primary) {
+    init(id: UUID = UUID(), name: String, icon: AisleIcon = .wheat, iconColor: AisleIconColor = .monochrome) {
         self.id = id
         self.name = name
-        self.symbol = symbol
+        self.icon = icon
         self.iconColor = iconColor
     }
 
@@ -38,8 +89,16 @@ struct Aisle: Identifiable, Codable, Equatable {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         id = try values.decode(UUID.self, forKey: .id)
         name = try values.decode(String.self, forKey: .name)
-        symbol = try values.decodeIfPresent(String.self, forKey: .symbol) ?? "basket"
-        iconColor = try values.decodeIfPresent(AisleIconColor.self, forKey: .iconColor) ?? .primary
+        icon = AisleIcon.migrated(from: try values.decodeIfPresent(String.self, forKey: .symbol), aisleName: name)
+        iconColor = try values.decodeIfPresent(AisleIconColor.self, forKey: .iconColor) ?? .monochrome
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(id, forKey: .id)
+        try values.encode(name, forKey: .name)
+        try values.encode(icon.rawValue, forKey: .symbol)
+        try values.encode(iconColor, forKey: .iconColor)
     }
 }
 
@@ -239,14 +298,14 @@ struct ShoppingList: Codable, Equatable {
         guard let index = aisles.firstIndex(where: { $0.id == id }) else { return }
         aisles[index].name = name
     }
-    mutating func editAisle(_ id: UUID, name: String, symbol: String) throws {
+    mutating func editAisle(_ id: UUID, name: String, icon: AisleIcon) throws {
         guard let index = aisles.firstIndex(where: { $0.id == id }) else { throw ListError.missing }
         try renameAisle(id, name: name)
-        aisles[index].symbol = symbol
+        aisles[index].icon = icon
     }
-    mutating func editAisleIcon(_ id: UUID, symbol: String, iconColor: AisleIconColor) throws {
+    mutating func editAisleIcon(_ id: UUID, icon: AisleIcon, iconColor: AisleIconColor) throws {
         guard let index = aisles.firstIndex(where: { $0.id == id }) else { throw ListError.missing }
-        aisles[index].symbol = symbol
+        aisles[index].icon = icon
         aisles[index].iconColor = iconColor
     }
     mutating func deleteAisle(_ id: UUID) {
@@ -283,9 +342,9 @@ struct ShoppingList: Codable, Equatable {
     }
     static func initial() -> Self {
         let names = ["Fruits et légumes", "Boucherie", "Poissonnerie", "Charcuterie", "Produits laitiers et œufs", "Boulangerie", "Épicerie", "Surgelés", "Boissons", "Hygiène et entretien"]
-        let symbols = ["carrot", "fork.knife", "fish", "fork.knife", "refrigerator", "birthday.cake", "cabinet", "snowflake", "waterbottle", "bubbles.and.sparkles"]
+        let icons: [AisleIcon] = [.carrot, .beef, .fish, .ham, .eggFried, .croissant, .wheat, .snowflake, .milk, .soapDispenserDroplet]
         var list = Self(
-            aisles: zip(names, symbols).map { Aisle(name: $0, symbol: $1) },
+            aisles: zip(names, icons).map { Aisle(name: $0, icon: $1) },
             products: defaultProducts.map { Product(name: $0.name, aliases: $0.aliases) }
         )
         list.registerDefaultProductClassifications()
