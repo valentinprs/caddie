@@ -3,7 +3,28 @@
 ## Confirmé
 
 - Organisation commune à tous les magasins.
-- Une liste permanente personnelle.
+- Plusieurs listes peuvent coexister, qu’elles soient personnelles ou partagées.
+- La dernière liste consultée est rouverte en priorité au lancement de l’application.
+- Une liste personnelle existante peut devenir partagée sans perdre son contenu.
+- Une liste partagée peut accueillir plusieurs participants.
+- Si son propriétaire la supprime ou arrête son partage, elle disparaît de l’application des participants sans création automatique d’une copie personnelle.
+- Tous les participants d’une liste partagée peuvent en modifier le contenu.
+- Seul le propriétaire peut inviter ou retirer des participants et arrêter le partage.
+- La propriété d’une liste partagée n’est pas transférable. Si le propriétaire arrête le partage, la liste disparaît pour tous les participants.
+- Chaque liste possède ses propres rayons et leur ordre, son propre catalogue de produits et ses propres corrections mémorisées.
+- Les participants peuvent créer, renommer, réordonner et supprimer les rayons d’une liste partagée.
+- Les données apprises dans une liste ne sont pas réutilisées automatiquement dans les autres listes.
+- Les modifications simultanées de champs différents d’un même élément sont fusionnées.
+- Lorsque plusieurs participants modifient simultanément le même champ, la dernière modification synchronisée l’emporte sans résolution manuelle.
+- Une suppression simultanée à une modification l’emporte sur cette modification.
+- L’ajout simultané du même produit est dédoublonné selon l’identité de produit de la liste.
+- Une nouvelle liste contient les rayons et le catalogue initiaux, mais aucun élément à acheter.
+- Caddie reste utilisable sans compte iCloud et hors connexion. Les modifications locales sont synchronisées lorsque iCloud et le réseau redeviennent disponibles.
+- Lorsque iCloud devient disponible, toutes les listes locales sont automatiquement synchronisées dans la base privée du compte sans devenir partagées.
+- Les listes personnelles synchronisées sont disponibles sur tous les appareils connectés au même compte iCloud.
+- Lors d’une déconnexion ou d’un changement de compte iCloud, les listes de l’ancien compte sont retirées de l’interface ; les listes créées ensuite hors iCloud restent locales.
+- Un participant peut quitter une liste partagée, ce qui la retire de son application sans affecter les autres membres.
+- Le propriétaire peut arrêter le partage ou supprimer la liste ; la suppression la retire à tous les participants.
 - L’utilisateur peut ajouter et supprimer des rayons, et corriger le classement d’un produit.
 - Lorsqu’aucun rayon existant ne convient précisément au produit, le modèle peut suggérer à l’utilisateur d’en créer un nouveau.
 - Le choix corrigé par l’utilisateur est mémorisé pour les prochains ajouts du produit.
@@ -23,8 +44,6 @@
 - Exemples présentés pendant la découverte ; liste vide pour commencer ses courses.
 - Le nom, la note et le rayon d’un élément sont modifiables après ajout.
 - Les rayons peuvent être renommés en conservant leurs produits, leur position et les corrections mémorisées.
-- Données stockées uniquement sur l’iPhone, sans synchronisation entre appareils.
-
 - Les produits présents restent visibles dans l’autocomplétion avec « Déjà dans la liste » ou « Acheté ». Leur sélection retrouve l’élément existant ; décocher un élément le remet à acheter.
 - La reconnaissance d’un produit ignore les majuscules et les espaces superflus, et utilise les variantes connues du catalogue, dont les pluriels. Le modèle ne fusionne pas librement les noms proches. Cette identité sert à éviter les doublons et retrouver les corrections mémorisées.
 - Changer le nom d’un élément remplace son produit et recalcule le classement, en respectant une éventuelle correction mémorisée pour le produit cible. La note est conservée ; le produit précédent reste dans le catalogue avec son classement mémorisé. La modification est bloquée si le produit cible est déjà dans la liste.
@@ -37,7 +56,7 @@
 
 - Utiliser le modèle embarqué Apple Intelligence pour proposer le classement.
 - Application native SwiftUI ciblant iOS 26 et ultérieur.
-- Sauvegarde JSON locale atomique dans Application Support, sans service distant.
+- Faire évoluer la sauvegarde JSON locale atomique vers un cache local multi-listes synchronisé par CloudKit, tout en préservant le fonctionnement hors ligne et la migration du fichier historique dans Application Support.
 - Foundation Models avec schéma de génération dynamique limité aux noms exacts des rayons existants et à « À classer ». Les UUID restent internes : le nom choisi est résolu vers l’identifiant du rayon dans l’instantané utilisé pour la requête. Les noms sont triés pour ne pas dépendre de l’ordre d’affichage.
 - Le classement s’appuie sur la nature, l’usage et les précisions du nom complet, sans exemples orientant le modèle ni table de correspondance entre produits et rayons. Un nom ambigu reste « À classer » sans suggestion ; une famille identifiable sans rayon adapté peut donner lieu à une suggestion.
 - Deux requêtes locales séparent l’identification de la famille commerciale, sans liste de rayons pour l’influencer, du choix parmi les rayons disponibles. Cette séparation augmente le temps de classement mais évite certaines confusions entre produit fini et matière première. La description intermédiaire est indicative, non persistée ; les corrections manuelles et les protections contre les réponses périmées restent prioritaires.
