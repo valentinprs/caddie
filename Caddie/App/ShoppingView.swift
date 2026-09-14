@@ -25,13 +25,22 @@ struct ShoppingView: View {
     @State private var addPanelPresented = false
     @State private var addPanelDetent: PresentationDetent = AddPanelLayout.compact
     @State private var managing = false
+    @State private var managingLists = false
     @State private var managementRequested = false
+    @State private var listsManagementRequested = false
     @State private var editing: ListItem?
     @State private var editingFromDrawer: ListItem?
     @State private var editingAisleIcon: Aisle?
     var body: some View {
         NavigationStack {
             List {
+                if let status = store.syncStatus.message {
+                    Section {
+                        Label(status, systemImage: store.syncStatus == .syncing ? "arrow.triangle.2.circlepath" : "icloud.slash")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 if let status = store.intelligenceStatus {
                     Section {
                         Label(status, systemImage: "hand.tap").font(.footnote).foregroundStyle(.secondary)
@@ -75,7 +84,23 @@ struct ShoppingView: View {
             .listSectionSpacing(16)
             .contentMargins(.bottom, addPanelPresented ? 112 : 0, for: .scrollContent)
             .background(Color(.systemGroupedBackground))
+            .navigationTitle(store.currentListName)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        ForEach(store.library.lists) { entry in
+                            Button {
+                                store.selectList(entry.id)
+                            } label: {
+                                Label(entry.metadata.name, systemImage: entry.id == store.currentListID ? "checkmark" : (entry.provenance == .shared ? "person.2" : "list.bullet"))
+                            }
+                        }
+                        Divider()
+                        Button("Gérer les listes", systemImage: "square.grid.2x2") { showListsManagement() }
+                    } label: {
+                        Label("Changer de liste", systemImage: "chevron.down")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Gérer les rayons", systemImage: "slider.horizontal.3") { showManagement() }
                 }
@@ -86,6 +111,7 @@ struct ShoppingView: View {
                     store: store,
                     selectedDetent: $addPanelDetent,
                     managementPresented: $managementRequested,
+                    listsManagementPresented: $listsManagementRequested,
                     iconEditingAisle: $editingAisleIcon,
                     productEditingItem: $editingFromDrawer
                 ) { item in
@@ -104,18 +130,24 @@ struct ShoppingView: View {
                 .interactiveDismissDisabled(true)
             }
             .sheet(isPresented: $managing, onDismiss: restoreAddPanel) { AislesView(store: store) }
+            .sheet(isPresented: $managingLists, onDismiss: restoreAddPanel) { ListsView(store: store) }
             .sheet(item: $editing, onDismiss: restoreAddPanel) { item in EditProductView(store: store, item: item) }
             .fullScreenCover(
-                isPresented: Binding(get: { !store.list.onboarded && !store.loadFailed }, set: { _ in }),
+                isPresented: Binding(get: { !store.onboarded && !store.loadFailed }, set: { _ in }),
                 onDismiss: restoreAddPanel
             ) {
-                WelcomeView { store.update { $0.onboarded = true } }
+                WelcomeView { store.completeOnboarding() }
             }
             .alert("Caddie", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
                 Button("Compris", role: .cancel) { store.error = nil }
             } message: { Text(store.error ?? "") }
             .onAppear { restoreAddPanel() }
-            .onChange(of: scenePhase) { _, phase in if phase == .active { store.refreshAvailability() } }
+            .onChange(of: scenePhase) { _, phase in if phase == .active { store.refreshCloud() } }
+            .onChange(of: store.currentListID) { _, _ in
+                editing = nil
+                editingFromDrawer = nil
+                editingAisleIcon = nil
+            }
         }
     }
 
@@ -126,6 +158,17 @@ struct ShoppingView: View {
             managementRequested = true
         } else {
             managing = true
+        }
+    }
+
+    private func showListsManagement() {
+        if addPanelPresented {
+            // Present from the compact add drawer, which is the view currently
+            // presenting a sheet. A sibling presentation from the main view is
+            // ignored by SwiftUI while that drawer is visible.
+            listsManagementRequested = true
+        } else {
+            managingLists = true
         }
     }
 
@@ -147,7 +190,7 @@ struct ShoppingView: View {
     }
 
     private func restoreAddPanel() {
-        guard store.list.onboarded, !store.loadFailed, !managing, editing == nil else { return }
+        guard store.onboarded, !store.loadFailed, !managing, !managingLists, editing == nil else { return }
         addPanelDetent = AddPanelLayout.compact
         addPanelPresented = true
     }
@@ -427,6 +470,7 @@ struct AddProductDrawer: View {
     @Bindable var store: Store
     @Binding var selectedDetent: PresentationDetent
     @Binding var managementPresented: Bool
+    @Binding var listsManagementPresented: Bool
     @Binding var iconEditingAisle: Aisle?
     @Binding var productEditingItem: ListItem?
     var openExisting: (ListItem) -> Void
@@ -480,6 +524,9 @@ struct AddProductDrawer: View {
         }
         .sheet(isPresented: $managementPresented) {
             AislesView(store: store)
+        }
+        .sheet(isPresented: $listsManagementPresented) {
+            ListsView(store: store)
         }
         .sheet(item: $iconEditingAisle) { aisle in
             EditAisleIconView(store: store, aisle: aisle)
@@ -701,6 +748,114 @@ struct AislesView: View {
             .sheet(item: $editingAisle) { aisle in
                 EditAisleView(store: store, aisle: aisle)
             }
+        }
+    }
+}
+
+struct ListsView: View {
+    @Bindable var store: Store
+    @Environment(\.dismiss) private var dismiss
+    @State private var newName = ""
+    @State private var renaming: LibraryList?
+    @State private var sharing: LibraryList?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    HStack {
+                        TextField("Nouvelle liste", text: $newName)
+                            .textInputAutocapitalization(.sentences)
+                        Button("Créer", systemImage: "plus.circle.fill") {
+                            if store.createList(name: newName) { newName = "" }
+                        }
+                        .labelStyle(.iconOnly)
+                        .disabled(ShoppingList.clean(newName).isEmpty)
+                        .frame(width: 44, height: 44)
+                    }
+                }
+
+                listSection("Mes listes", entries: store.library.lists.filter { $0.provenance != .shared })
+                listSection("Listes partagées", entries: store.library.lists.filter { $0.provenance == .shared })
+
+                if let error = store.error {
+                    Text(error).foregroundStyle(.red).font(.footnote)
+                }
+            }
+            .navigationTitle("Mes listes")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Terminé") { dismiss() } }
+            }
+            .sheet(item: $renaming) { entry in
+                RenameListView(store: store, entry: entry)
+            }
+            .sheet(item: $sharing) { entry in
+                CloudSharingView(entry: entry) {
+                    if entry.provenance == .shared { store.removeSharedList(entry.id) }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private func listSection(_ title: String, entries: [LibraryList]) -> some View {
+        if !entries.isEmpty {
+            Section(title) {
+                ForEach(entries) { entry in
+                    Button {
+                        store.selectList(entry.id)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Label(entry.metadata.name, systemImage: entry.provenance == .shared ? "person.2" : "list.bullet")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if entry.id == store.currentListID { Image(systemName: "checkmark") }
+                        }
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(entry.provenance == .shared ? "Quitter" : "Supprimer", systemImage: entry.provenance == .shared ? "rectangle.portrait.and.arrow.right" : "trash", role: .destructive) {
+                            if entry.provenance == .shared { sharing = entry }
+                            else { store.deleteList(entry.id) }
+                        }
+                            .disabled(store.library.lists.count == 1)
+                        if entry.isOwner {
+                            Button("Renommer", systemImage: "pencil") { renaming = entry }.tint(.blue)
+                            Button("Partager", systemImage: "person.badge.plus") { sharing = entry }.tint(.indigo)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct RenameListView: View {
+    @Bindable var store: Store
+    let entry: LibraryList
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+
+    init(store: Store, entry: LibraryList) {
+        self.store = store
+        self.entry = entry
+        _name = State(initialValue: entry.metadata.name)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form { TextField("Nom de la liste", text: $name) }
+                .navigationTitle("Renommer la liste")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Enregistrer") {
+                            if store.renameList(entry.id, name: name) { dismiss() }
+                        }
+                        .disabled(ShoppingList.clean(name).isEmpty)
+                    }
+                }
         }
     }
 }
@@ -991,7 +1146,7 @@ struct WelcomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                Image("CaddieLogo")
+                Image("CaddieAppIcon")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 92, height: 92)
@@ -1008,9 +1163,16 @@ struct WelcomeView: View {
                 }.padding(24).frame(maxWidth: .infinity, alignment: .leading).background(.background, in: RoundedRectangle(cornerRadius: 24))
                 Text("Dix rayons pour commencer, à adapter à votre parcours. Le classement automatique utilise Apple Intelligence lorsqu’il est disponible. Vous gardez toujours la main.")
                     .foregroundStyle(.secondary)
-                Label("Vos produits restent sur votre iPhone.", systemImage: "iphone").font(.footnote)
-                Button("Commencer ma liste", action: start).font(.headline).frame(maxWidth: .infinity)
-                    .buttonStyle(.borderedProminent).controlSize(.large).buttonBorderShape(.capsule)
+                Label("Vos listes restent disponibles hors connexion et se synchronisent avec iCloud lorsqu’il est disponible.", systemImage: "icloud").font(.footnote)
+                Button(action: start) {
+                    Text("Commencer ma liste")
+                        .font(.headline)
+                        .foregroundStyle(Color(.systemBackground))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.primary, in: Capsule())
+                }
+                .buttonStyle(.plain)
                 Text("Ces exemples ne seront pas ajoutés à votre liste.").font(.caption).foregroundStyle(.secondary)
             }.padding(28)
         }.background(Color(.systemGroupedBackground)).interactiveDismissDisabled()

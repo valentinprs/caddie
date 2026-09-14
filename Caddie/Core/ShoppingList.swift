@@ -72,17 +72,19 @@ struct Aisle: Identifiable, Codable, Equatable {
     var name: String
     var icon: AisleIcon = .wheat
     var iconColor: AisleIconColor = .monochrome
+    var orderKey: Int64 = 0
 
     // Keep the legacy "symbol" key so existing local files remain readable.
     private enum CodingKeys: String, CodingKey {
-        case id, name, symbol, iconColor
+        case id, name, symbol, iconColor, orderKey
     }
 
-    init(id: UUID = UUID(), name: String, icon: AisleIcon = .wheat, iconColor: AisleIconColor = .monochrome) {
+    init(id: UUID = UUID(), name: String, icon: AisleIcon = .wheat, iconColor: AisleIconColor = .monochrome, orderKey: Int64 = 0) {
         self.id = id
         self.name = name
         self.icon = icon
         self.iconColor = iconColor
+        self.orderKey = orderKey
     }
 
     init(from decoder: Decoder) throws {
@@ -91,6 +93,7 @@ struct Aisle: Identifiable, Codable, Equatable {
         name = try values.decode(String.self, forKey: .name)
         icon = AisleIcon.migrated(from: try values.decodeIfPresent(String.self, forKey: .symbol), aisleName: name)
         iconColor = try values.decodeIfPresent(AisleIconColor.self, forKey: .iconColor) ?? .monochrome
+        orderKey = try values.decodeIfPresent(Int64.self, forKey: .orderKey) ?? 0
     }
 
     func encode(to encoder: Encoder) throws {
@@ -99,6 +102,7 @@ struct Aisle: Identifiable, Codable, Equatable {
         try values.encode(name, forKey: .name)
         try values.encode(icon.rawValue, forKey: .symbol)
         try values.encode(iconColor, forKey: .iconColor)
+        try values.encode(orderKey, forKey: .orderKey)
     }
 }
 
@@ -151,6 +155,39 @@ struct ListItem: Identifiable, Codable, Equatable {
     var purchased = false
     var suggestion: String?
     var revision = UUID()
+    var createdAt = Date()
+    var orderKey: Int64 = 0
+
+    private enum CodingKeys: String, CodingKey {
+        case id, productID, note, aisleID, purchased, suggestion, revision, createdAt, orderKey
+    }
+
+    init(id: UUID = UUID(), productID: UUID, note: String = "", aisleID: UUID? = nil,
+         purchased: Bool = false, suggestion: String? = nil, revision: UUID = UUID(),
+         createdAt: Date = Date(), orderKey: Int64 = 0) {
+        self.id = id
+        self.productID = productID
+        self.note = note
+        self.aisleID = aisleID
+        self.purchased = purchased
+        self.suggestion = suggestion
+        self.revision = revision
+        self.createdAt = createdAt
+        self.orderKey = orderKey
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        productID = try values.decode(UUID.self, forKey: .productID)
+        note = try values.decodeIfPresent(String.self, forKey: .note) ?? ""
+        aisleID = try values.decodeIfPresent(UUID.self, forKey: .aisleID)
+        purchased = try values.decodeIfPresent(Bool.self, forKey: .purchased) ?? false
+        suggestion = try values.decodeIfPresent(String.self, forKey: .suggestion)
+        revision = try values.decodeIfPresent(UUID.self, forKey: .revision) ?? UUID()
+        createdAt = try values.decodeIfPresent(Date.self, forKey: .createdAt) ?? .distantPast
+        orderKey = try values.decodeIfPresent(Int64.self, forKey: .orderKey) ?? 0
+    }
 }
 
 enum ListError: LocalizedError {
@@ -166,6 +203,7 @@ enum ListError: LocalizedError {
 }
 
 struct ShoppingList: Codable, Equatable {
+    typealias ID = UUID
     var version = 1
     var aisles: [Aisle] = []
     var products: [Product] = []
@@ -234,7 +272,8 @@ struct ShoppingList: Codable, Equatable {
             productID: product.id,
             note: note.trimmingCharacters(in: .whitespacesAndNewlines),
             aisleID: product.preferredAisle,
-            suggestion: product.hasPreference ? nil : product.classificationSuggestion
+            suggestion: product.hasPreference ? nil : product.classificationSuggestion,
+            orderKey: (items.map(\.orderKey).max() ?? -1) + 1
         )
         items.append(item)
         if let index = products.firstIndex(where: { $0.id == product.id }) { products[index].uses += 1 }
@@ -330,6 +369,27 @@ struct ShoppingList: Codable, Equatable {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         items[index].suggestion = nil
     }
+    mutating func invalidateClassification(_ id: UUID) {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        items[index].revision = UUID()
+    }
+
+    mutating func repairReferences() {
+        let aisleIDs = Set(aisles.map(\.id))
+        for index in items.indices where items[index].aisleID.map({ !aisleIDs.contains($0) }) == true {
+            items[index].aisleID = nil
+            items[index].suggestion = nil
+            items[index].revision = UUID()
+        }
+        for index in products.indices where products[index].preferredAisle.map({ !aisleIDs.contains($0) }) == true {
+            products[index].hasPreference = false
+            products[index].preferredAisle = nil
+            products[index].hasClassification = false
+            products[index].classificationSuggestion = nil
+        }
+        var knownProducts = Set<UUID>()
+        items = items.filter { knownProducts.insert($0.productID).inserted }
+    }
     mutating func registerDefaultProductClassifications() {
         for definition in Self.defaultProducts {
             guard let productIndex = products.firstIndex(where: { Self.key($0.name) == Self.key(definition.name) }),
@@ -344,7 +404,7 @@ struct ShoppingList: Codable, Equatable {
         let names = ["Fruits et légumes", "Boucherie", "Poissonnerie", "Charcuterie", "Produits laitiers et œufs", "Boulangerie", "Épicerie", "Surgelés", "Boissons", "Hygiène et entretien"]
         let icons: [AisleIcon] = [.carrot, .beef, .fish, .ham, .eggFried, .croissant, .wheat, .snowflake, .milk, .soapDispenserDroplet]
         var list = Self(
-            aisles: zip(names, icons).map { Aisle(name: $0, icon: $1) },
+            aisles: zip(names, icons).enumerated().map { Aisle(name: $0.element.0, icon: $0.element.1, orderKey: Int64($0.offset)) },
             products: defaultProducts.map { Product(name: $0.name, aliases: $0.aliases) }
         )
         list.registerDefaultProductClassifications()

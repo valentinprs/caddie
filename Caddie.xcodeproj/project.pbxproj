@@ -12,6 +12,15 @@
 		B9167B4BB43D224A97983F99 /* Caddie/App/ShoppingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BAA074F0DCF79D47F5F8365 /* Caddie/App/ShoppingView.swift */; };
 		D3749FC3C1E782AA4F9A4371 /* Caddie/App/Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = C931C79178FCB76777B87F31 /* Caddie/App/Store.swift */; };
 		FE928E0C6247409A51E5BD79 /* Caddie/Core/ShoppingList.swift in Sources */ = {isa = PBXBuildFile; fileRef = A55291814477FA2C37C8EF9B /* Caddie/Core/ShoppingList.swift */; };
+		A10000000000000000000001 /* Caddie/Core/ListLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* Caddie/Core/ListLibrary.swift */; };
+		A10000000000000000000002 /* Caddie/Core/LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* Caddie/Core/LocalStore.swift */; };
+		A10000000000000000000003 /* Caddie/Core/SyncModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* Caddie/Core/SyncModel.swift */; };
+		A10000000000000000000004 /* Caddie/App/Cloud/CloudSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* Caddie/App/Cloud/CloudSchema.swift */; };
+		A10000000000000000000005 /* Caddie/App/Cloud/CloudRecordMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* Caddie/App/Cloud/CloudRecordMapper.swift */; };
+		A10000000000000000000006 /* Caddie/App/Cloud/ConflictResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* Caddie/App/Cloud/ConflictResolver.swift */; };
+		A10000000000000000000007 /* Caddie/App/Cloud/CloudSyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* Caddie/App/Cloud/CloudSyncCoordinator.swift */; };
+		A10000000000000000000008 /* Caddie/App/Sharing/CloudSharingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* Caddie/App/Sharing/CloudSharingController.swift */; };
+		A10000000000000000000009 /* Caddie/App/Sharing/ShareSceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* Caddie/App/Sharing/ShareSceneDelegate.swift */; };
 		D5C4D2A1A17A4A0C9E4D7B1F /* Caddie/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D5C4D2A0A17A4A0C9E4D7B1F /* Caddie/Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -23,6 +32,17 @@
 		A55291814477FA2C37C8EF9B /* Caddie/Core/ShoppingList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/Core/ShoppingList.swift; sourceTree = SOURCE_ROOT; };
 		C931C79178FCB76777B87F31 /* Caddie/App/Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/App/Store.swift; sourceTree = SOURCE_ROOT; };
 		D5C4D2A0A17A4A0C9E4D7B1F /* Caddie/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Caddie/Assets.xcassets; sourceTree = SOURCE_ROOT; };
+		A20000000000000000000001 /* Caddie/Core/ListLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/Core/ListLibrary.swift; sourceTree = SOURCE_ROOT; };
+		A20000000000000000000002 /* Caddie/Core/LocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/Core/LocalStore.swift; sourceTree = SOURCE_ROOT; };
+		A20000000000000000000003 /* Caddie/Core/SyncModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/Core/SyncModel.swift; sourceTree = SOURCE_ROOT; };
+		A20000000000000000000004 /* Caddie/App/Cloud/CloudSchema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/App/Cloud/CloudSchema.swift; sourceTree = SOURCE_ROOT; };
+		A20000000000000000000005 /* Caddie/App/Cloud/CloudRecordMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/App/Cloud/CloudRecordMapper.swift; sourceTree = SOURCE_ROOT; };
+		A20000000000000000000006 /* Caddie/App/Cloud/ConflictResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/App/Cloud/ConflictResolver.swift; sourceTree = SOURCE_ROOT; };
+		A20000000000000000000007 /* Caddie/App/Cloud/CloudSyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/App/Cloud/CloudSyncCoordinator.swift; sourceTree = SOURCE_ROOT; };
+		A20000000000000000000008 /* Caddie/App/Sharing/CloudSharingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/App/Sharing/CloudSharingController.swift; sourceTree = SOURCE_ROOT; };
+		A20000000000000000000009 /* Caddie/App/Sharing/ShareSceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie/App/Sharing/ShareSceneDelegate.swift; sourceTree = SOURCE_ROOT; };
+		A2000000000000000000000A /* Caddie/Caddie.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Caddie/Caddie.entitlements; sourceTree = SOURCE_ROOT; };
+		A2000000000000000000000B /* Caddie/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Caddie/Info.plist; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,6 +59,17 @@
 		64292B1C2B2E13EAD8788FC8 = {
 			isa = PBXGroup;
 			children = (
+				A2000000000000000000000B /* Caddie/Info.plist */,
+				A2000000000000000000000A /* Caddie/Caddie.entitlements */,
+				A20000000000000000000009 /* Caddie/App/Sharing/ShareSceneDelegate.swift */,
+				A20000000000000000000008 /* Caddie/App/Sharing/CloudSharingController.swift */,
+				A20000000000000000000007 /* Caddie/App/Cloud/CloudSyncCoordinator.swift */,
+				A20000000000000000000006 /* Caddie/App/Cloud/ConflictResolver.swift */,
+				A20000000000000000000005 /* Caddie/App/Cloud/CloudRecordMapper.swift */,
+				A20000000000000000000004 /* Caddie/App/Cloud/CloudSchema.swift */,
+				A20000000000000000000003 /* Caddie/Core/SyncModel.swift */,
+				A20000000000000000000002 /* Caddie/Core/LocalStore.swift */,
+				A20000000000000000000001 /* Caddie/Core/ListLibrary.swift */,
 				184B59C24E4BB9B793D7E7E8 /* Caddie/App/CaddieApp.swift */,
 				3C69F3F079F8CB3336B5CFDB /* Caddie/App/Intelligence.swift */,
 				5BAA074F0DCF79D47F5F8365 /* Caddie/App/ShoppingView.swift */,
@@ -120,6 +151,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000009 /* Caddie/App/Sharing/ShareSceneDelegate.swift in Sources */,
+				A10000000000000000000008 /* Caddie/App/Sharing/CloudSharingController.swift in Sources */,
+				A10000000000000000000007 /* Caddie/App/Cloud/CloudSyncCoordinator.swift in Sources */,
+				A10000000000000000000006 /* Caddie/App/Cloud/ConflictResolver.swift in Sources */,
+				A10000000000000000000005 /* Caddie/App/Cloud/CloudRecordMapper.swift in Sources */,
+				A10000000000000000000004 /* Caddie/App/Cloud/CloudSchema.swift in Sources */,
+				A10000000000000000000003 /* Caddie/Core/SyncModel.swift in Sources */,
+				A10000000000000000000002 /* Caddie/Core/LocalStore.swift in Sources */,
+				A10000000000000000000001 /* Caddie/Core/ListLibrary.swift in Sources */,
 				5EAF599294DBCC66F505782A /* Caddie/App/CaddieApp.swift in Sources */,
 				1872FA6B55F01812FA1CE52A /* Caddie/App/Intelligence.swift in Sources */,
 				B9167B4BB43D224A97983F99 /* Caddie/App/ShoppingView.swift in Sources */,
@@ -134,10 +174,12 @@
 		639A7CA24D39909E713B47F7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Caddie/Caddie.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YLBTRM8MH2;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Caddie/Info.plist;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_KEY_CFBundleDisplayName = Caddie;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.shopping";
@@ -156,10 +198,12 @@
 		7082CC0B6FC1282FCEABD07A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Caddie/Caddie.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YLBTRM8MH2;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Caddie/Info.plist;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_KEY_CFBundleDisplayName = Caddie;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.shopping";

@@ -1,12 +1,10 @@
 # Decisions
 
-- The current application is local-only, but the accepted product direction adds multiple autonomous lists, private iCloud synchronization, and CloudKit sharing while preserving offline use.
-- Each list owns its aisles, product catalog, remembered corrections, and items. These data do not flow between lists.
-- A shared list has one owner and any number of read-write participants. Only the owner manages participation; ownership transfer is out of scope.
-- Concurrent edits merge independent fields, use last-arriving-write for the same field, prefer deletion over modification, and deduplicate simultaneous additions of the same product.
-- User-facing copy is French and uses “rayon” rather than “catégorie” for aisle terminology.
-- Manual classification remains available when the local model is unavailable.
-- The legacy `Application Support/Courses/list.json` location remains compatible.
-- Persistence uses atomic saves and blocks writes after a load failure.
+- Model multiple autonomous lists. A list owns its aisles, product catalog, remembered corrections, and items; these data do not flow between lists.
+- Preserve the legacy `Application Support/Courses/list.json` location for migration, then use the version-2 `store-v2/snapshot.json` cache with atomic saves. Block writes after a load failure, and isolate account changes with account-specific quarantine snapshots.
+- Use a mutation journal plus stable CloudKit record identities to coalesce local work and support field-level merges. Concurrent edits merge independent fields; the last arriving write wins for the same field, deletion wins over modification, and stable product/item identities deduplicate simultaneous additions.
+- Use CloudKit private custom zones for owned lists and the shared database for shared lists, with one `CKSyncEngine` per scope. Persist engine state, system fields, and pending mutations in the local snapshot so sync can resume offline.
+- A shared list has one owner and read-write participants. Only the owner manages participation; ownership transfer is out of scope. Sharing uses a zone-wide `CKShare` and the system sharing controller; invitation acceptance enters through the scene delegate.
+- Keep French user-facing copy and use “rayon” for aisle terminology. Manual classification remains available when the local model is unavailable.
 
-Record only durable decisions whose rationale would otherwise need to be rediscovered. Keep temporary implementation notes in `handoff.md`.
+CloudKit behavior beyond local/offline execution—server conflicts, invitations, background delivery, and schema promotion—requires the manual device/account validation procedure in `docs/icloud.md`.
