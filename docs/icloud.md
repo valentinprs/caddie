@@ -1,13 +1,13 @@
 # Configuration et validation iCloud
 
-Caddie utilise une zone CloudKit personnalisée par liste dans le conteneur `iCloud.com.valentin.courses`. Les listes du propriétaire résident dans sa base privée; les invitations donnent accès à la même zone depuis la base partagée des participants. Le cache local `Application Support/Courses/store-v2/snapshot.json` reste la source immédiate de l’interface et contient, dans une écriture atomique, l’état métier et les changements en attente.
+Caddie utilise une zone CloudKit personnalisée par liste dans le conteneur `iCloud.com.valentin.caddie`. Les listes du propriétaire résident dans sa base privée; les invitations donnent accès à la même zone depuis la base partagée des participants. Le cache local `Application Support/Courses/store-v2/snapshot.json` reste la source immédiate de l’interface et contient, dans une écriture atomique, l’état métier et les changements en attente.
 
 ## Configuration Apple requise
 
-1. Dans le compte Developer associé à l’équipe de signature, créer ou sélectionner `iCloud.com.valentin.courses` et l’associer à l’identifiant d’app `com.valentin.courses`.
+1. Dans le compte Developer associé à l’équipe de signature, créer ou sélectionner `iCloud.com.valentin.caddie` et l’associer à l’identifiant d’app `com.valentin.caddie`. Les identifiants de conteneur iCloud ne peuvent pas être renommés : créer le nouveau conteneur isole les anciennes données et les partages de l’ancien conteneur.
 2. Dans Xcode, vérifier les capacités iCloud/CloudKit, Push Notifications et Background Modes > Remote notifications. Le dépôt contient les entitlements et les clés d’Info.plist correspondantes; le profil de provisionnement doit les autoriser.
-3. Dans CloudKit Console, utiliser d’abord l’environnement Development. Laisser l’application créer les zones et les types `List`, `Aisle`, `Product` et `ListItem`, puis vérifier les champs définis dans `CloudSchema.swift`.
-4. Ne promouvoir le schéma en Production qu’après une validation complète sur appareils. Cette promotion ne remplace pas le déploiement TestFlight et les changements de schéma de production sont difficiles à retirer.
+3. Dans CloudKit Development, importer et valider `Caddie/CloudKitSchema.ckdb` avec `xcrun cktool`. Le schéma définit les types `List`, `Aisle`, `Product` et `ListItem` et leurs champs, tels qu’utilisés par `CloudSchema.swift`.
+4. Créer au moins un partage depuis une build Development : CloudKit ajoute alors son type système `cloudkit.share`. Ne promouvoir le schéma en Production qu’après cette étape et une validation complète sur appareils. `cktool` importe les schémas en Development, tandis que la promotion vers Production se confirme dans CloudKit Console. Cette promotion ne remplace pas le déploiement TestFlight et les changements de schéma de production sont difficiles à retirer.
 
 ## Validation avant livraison
 
