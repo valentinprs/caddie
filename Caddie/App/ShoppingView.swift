@@ -16,8 +16,24 @@ private struct AisleIconView: View {
 }
 
 private enum AddPanelLayout {
-    static let compact: PresentationDetent = .height(76)
+    static let compactHeight: CGFloat = 76
+    static let compact: PresentationDetent = .height(compactHeight)
 }
+
+#if DEBUG
+private struct DevelopmentBuildBadge: View {
+    var body: some View {
+        Label("Développement", systemImage: "hammer.fill")
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.orange)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.thinMaterial, in: Capsule())
+            .overlay { Capsule().stroke(.orange.opacity(0.25), lineWidth: 1) }
+            .accessibilityLabel("Build de développement")
+    }
+}
+#endif
 
 struct ShoppingView: View {
     @Bindable var store: Store
@@ -84,6 +100,21 @@ struct ShoppingView: View {
             .listSectionSpacing(16)
             .contentMargins(.bottom, addPanelPresented ? 112 : 0, for: .scrollContent)
             .background(Color(.systemGroupedBackground))
+#if DEBUG
+            .overlay {
+                GeometryReader { proxy in
+                    if addPanelPresented, addPanelDetent == AddPanelLayout.compact {
+                        VStack {
+                            Spacer()
+                            DevelopmentBuildBadge()
+                                .padding(.bottom, AddPanelLayout.compactHeight + proxy.safeAreaInsets.bottom + 8)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .allowsHitTesting(false)
+            }
+#endif
             .navigationTitle(store.currentListName)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

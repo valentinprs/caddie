@@ -9,4 +9,4 @@ Verified validation:
 - Ad hoc signed build and smoke test passed on an iPhone 17 Pro without an iCloud account; the app stayed local and displayed the iCloud-unavailable state.
 - Final `Info.plist` contains `CKSharingSupported` and `UIBackgroundModes` with `remote-notification`; CloudKit entitlements are present.
 
-Still outstanding is real CloudKit validation: private/shared sync, sharing and invitation acceptance, APNs/background delivery, server conflict behavior, and schema promotion require compatible Apple devices, Apple accounts, and manual execution of `docs/icloud.md`.
+CloudKit Development and Production now contain the validated declarative schema in `Caddie/CloudKitSchema.ckdb`; after a real Development share, the required system type `cloudkit.share` was also deployed to Production and verified with `cktool`. An owner and participant then completed a successful TestFlight list-sharing test. Broader background-delivery and conflict-behavior coverage remains useful, but the current Production sharing path works.

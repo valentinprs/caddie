@@ -2,7 +2,7 @@ import CloudKit
 import Foundation
 
 enum CloudSchema {
-    static let containerIdentifier = "iCloud.com.valentin.courses"
+    static let containerIdentifier = "iCloud.com.valentin.caddie"
     static let schemaVersion: Int64 = 1
 
     enum RecordType {
