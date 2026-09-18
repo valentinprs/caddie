@@ -8,4 +8,6 @@ CloudKit deployment is complete for the current container: `iCloud.com.valentin.
 
 The list screen also contains a small orange “Développement” marker above the compact add drawer in Debug builds only. It is intentionally compiled out of TestFlight/Release builds, making it easy to tell an Xcode install from the TestFlight build.
 
+The add-product sheet's fast downward swipe bug is fixed. UIKit could previously finish the keyboard-dismiss interaction at the large detent after SwiftUI had already selected the compact detent, leaving a large sheet without its close button. `SheetVisualCentering.Coordinator` now reasserts the compact UIKit detent after the interactive transition settles. The fix was reproduced and accepted on the iPhone 18 Pro iOS 27.0 simulator. The list deletion swipe action also uses the explicit system-red tint.
+
 For the next app change: run the Debug build on a device for Development-environment checks, then increment the build number, archive, upload it to App Store Connect, and distribute the processed build through the existing TestFlight tester group. Continue using `docs/icloud.md` for any schema or device/account troubleshooting. Background delivery and conflict handling remain sensible areas for broader real-device testing, but are not blockers for the already working sharing flow.

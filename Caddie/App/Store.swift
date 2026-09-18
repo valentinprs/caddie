@@ -59,7 +59,16 @@ final class Store {
             self.error = "Impossible de lire vos listes. Vos données ont été conservées. Fermez puis relancez l’app."
         }
         refreshAvailability()
+#if targetEnvironment(simulator)
+        // The simulator does not have a signed-in iCloud container. Creating a
+        // CKContainer for the app's production identifier raises an Objective-C
+        // exception (and terminates the process) before CloudKit can report an
+        // ordinary availability error. Keep local list editing available while
+        // running in Simulator; real devices still initialize CloudKit below.
+        syncCoordinator = nil
+#else
         syncCoordinator = CloudSyncCoordinator(store: self, initialSnapshot: snapshot)
+#endif
         ShareInvitationCenter.handler = { [weak self] metadata in self?.syncCoordinator?.accept(metadata) }
         syncCoordinator?.start()
     }

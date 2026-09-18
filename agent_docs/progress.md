@@ -5,7 +5,9 @@ The repository now contains the multiple-list implementation, version-2 local sn
 Verified validation:
 
 - `swift test`: 28/28 tests passed.
-- Unsigned simulator build passed with Xcode 26.6 and iOS SDK 26.5.
+- Unsigned simulator build passed with Xcode 27.0 and iOS 27.0 on an iPhone 18 Pro simulator.
+- The add-product sheet now reconciles its SwiftUI detent with `UISheetPresentationController` after a fast downward swipe dismisses the keyboard; the previously reproducible large-sheet/compact-binding mismatch no longer occurs.
+- Simulator launches skip CloudKit container initialization, avoiding the `CKContainer(identifier:)` startup trap while preserving CloudKit on devices.
 - Ad hoc signed build and smoke test passed on an iPhone 17 Pro without an iCloud account; the app stayed local and displayed the iCloud-unavailable state.
 - Final `Info.plist` contains `CKSharingSupported` and `UIBackgroundModes` with `remote-notification`; CloudKit entitlements are present.
 

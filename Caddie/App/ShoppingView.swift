@@ -154,12 +154,11 @@ struct ShoppingView: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(38)
                 .presentationBackground(Color(.systemBackground))
-                .background(SheetVisualCentering())
+                .background(SheetVisualCentering(selectedDetent: $addPanelDetent))
                 // Keep the compact add bar visible without making the list modal.
                 // At the compact detent, taps should pass through to list rows;
                 // the expanded sheet remains modal while the user is editing.
                 .presentationBackgroundInteraction(.enabled(upThrough: AddPanelLayout.compact))
-                .interactiveDismissDisabled(true)
             }
             .sheet(isPresented: $managing, onDismiss: restoreAddPanel) { AislesView(store: store) }
             .sheet(isPresented: $managingLists, onDismiss: restoreAddPanel) { ListsView(store: store) }
@@ -468,6 +467,12 @@ private struct ProductRow: View {
 }
 
 private struct SheetVisualCentering: UIViewRepresentable {
+    @Binding var selectedDetent: PresentationDetent
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(selectedDetent: $selectedDetent)
+    }
+
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
         view.isUserInteractionEnabled = false
@@ -475,14 +480,86 @@ private struct SheetVisualCentering: UIViewRepresentable {
     }
 
     func updateUIView(_ view: UIView, context: Context) {
+        context.coordinator.selectedDetent = $selectedDetent
         DispatchQueue.main.async {
             guard let controller = view.parentViewController?.presentationController as? UISheetPresentationController else { return }
+            context.coordinator.install(on: controller)
+            context.coordinator.reconcileDetent(on: controller)
             let presenter = controller.presentingViewController.view
             controller.sourceView = presenter
             // The compact drawer already has a clear surface boundary; removing
             // the system drop shadow keeps it visually part of the list.
             controller.presentedView?.layer.shadowOpacity = 0
             controller.presentedView?.layer.shadowRadius = 0
+        }
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, UISheetPresentationControllerDelegate {
+        var selectedDetent: Binding<PresentationDetent>
+        nonisolated(unsafe) private weak var forwardedDelegate: (any UISheetPresentationControllerDelegate)?
+        private var reconciliationTask: Task<Void, Never>?
+
+        init(selectedDetent: Binding<PresentationDetent>) {
+            self.selectedDetent = selectedDetent
+        }
+
+        func install(on controller: UISheetPresentationController) {
+            guard controller.delegate !== self else { return }
+            forwardedDelegate = controller.delegate
+            controller.delegate = self
+            controller.presentedViewController.isModalInPresentation = true
+        }
+
+        func presentationControllerShouldDismiss(_ presentationController: UIPresentationController) -> Bool {
+            false
+        }
+
+        func presentationControllerDidAttemptToDismiss(_ presentationController: UIPresentationController) {
+            guard let controller = presentationController as? UISheetPresentationController else { return }
+            selectedDetent.wrappedValue = AddPanelLayout.compact
+            reconcileDetent(on: controller)
+        }
+
+        func reconcileDetent(on controller: UISheetPresentationController) {
+            reconciliationTask?.cancel()
+            guard selectedDetent.wrappedValue == AddPanelLayout.compact,
+                  let compactIdentifier = controller.detents.first(where: { $0.identifier != .large })?.identifier
+            else { return }
+
+            // During a quick downward swipe UIKit first dismisses the keyboard,
+            // then finishes the interactive sheet transition by snapping back to
+            // `.large`. SwiftUI has already selected the compact detent at that
+            // point, so a single immediate assignment is overwritten by UIKit.
+            // Re-assert the requested detent just after the interaction settles.
+            reconciliationTask = Task { @MainActor [weak self, weak controller] in
+                for delay in [0, 80, 160, 280] {
+                    if delay > 0 {
+                        try? await Task.sleep(for: .milliseconds(delay))
+                    }
+                    guard !Task.isCancelled,
+                          let self,
+                          let controller,
+                          self.selectedDetent.wrappedValue == AddPanelLayout.compact
+                    else { return }
+                    guard controller.selectedDetentIdentifier != compactIdentifier else { return }
+
+                    controller.animateChanges {
+                        controller.selectedDetentIdentifier = compactIdentifier
+                    }
+                }
+            }
+        }
+
+        override func responds(to selector: Selector!) -> Bool {
+            super.responds(to: selector) || forwardedDelegate?.responds(to: selector) == true
+        }
+
+        override func forwardingTarget(for selector: Selector!) -> Any? {
+            guard let forwardedDelegate, forwardedDelegate.responds(to: selector) else {
+                return super.forwardingTarget(for: selector)
+            }
+            return forwardedDelegate
         }
     }
 }
@@ -850,7 +927,8 @@ struct ListsView: View {
                             if entry.provenance == .shared { sharing = entry }
                             else { store.deleteList(entry.id) }
                         }
-                            .disabled(store.library.lists.count == 1)
+                        .tint(Color(uiColor: .systemRed))
+                        .disabled(store.library.lists.count == 1)
                         if entry.isOwner {
                             Button("Renommer", systemImage: "pencil") { renaming = entry }.tint(.blue)
                             Button("Partager", systemImage: "person.badge.plus") { sharing = entry }.tint(.indigo)
