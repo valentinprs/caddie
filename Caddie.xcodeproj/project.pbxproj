@@ -176,7 +176,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Caddie/Caddie.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = YLBTRM8MH2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Caddie/Info.plist;
@@ -200,7 +200,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Caddie/Caddie.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = YLBTRM8MH2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Caddie/Info.plist;
