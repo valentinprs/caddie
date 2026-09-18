@@ -150,6 +150,7 @@ struct ShoppingView: View {
                 }
                 .presentationSizing(.form)
                 .presentationDetents([AddPanelLayout.compact, .large], selection: $addPanelDetent)
+                .presentationContentInteraction(.resizes)
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(38)
                 .presentationBackground(Color(.systemBackground))
