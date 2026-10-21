@@ -647,11 +647,18 @@ struct AddProductDrawer: View {
     }
 
     private var primaryField: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 0) {
+            // The icon, its leading margin and the gap before the text all focus the
+            // field, so it can be reached without stretching the thumb to the text.
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(.secondary)
                 .frame(width: 24)
+                .padding(.leading, 16)
+                .padding(.trailing, 12)
+                .frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture { focused = .name }
             TextField("Ajouter un produit", text: $name,
                       prompt: Text("Ajouter un produit").foregroundStyle(Color.primary.opacity(0.55)))
                 .font(.system(size: 18, weight: .medium))
@@ -659,7 +666,6 @@ struct AddProductDrawer: View {
                 .submitLabel(.done)
                 .onSubmit { addProduct() }
         }
-        .padding(.leading, 16)
         .padding(.trailing, 16)
         .frame(height: 48)
         .frame(maxWidth: .infinity)
