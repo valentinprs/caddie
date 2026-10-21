@@ -51,6 +51,32 @@ final class ListLibraryTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: legacyURL), source)
     }
 
+    func testOnboardingOnlyOnFirstLaunch() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = LocalStore(directory: root.appendingPathComponent("store-v2"))
+        let legacyURL = root.appendingPathComponent("list.json")
+
+        let first = try store.load(legacyURL: legacyURL)
+        XCTAssertFalse(first.onboarded)
+
+        let relaunched = try store.load(legacyURL: legacyURL)
+        XCTAssertTrue(relaunched.onboarded)
+        XCTAssertEqual(relaunched.library, first.library)
+    }
+
+    func testLegacyUpdateSkipsOnboarding() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let legacyURL = root.appendingPathComponent("list.json")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try JSONEncoder().encode(ShoppingList.initial()).write(to: legacyURL)
+
+        let migrated = try LocalStore(directory: root.appendingPathComponent("store-v2")).load(legacyURL: legacyURL)
+        XCTAssertTrue(migrated.onboarded)
+        XCTAssertEqual(migrated.library.lists.count, 1)
+    }
+
     func testCorruptV2IsNotReplacedFromLegacy() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

@@ -51,14 +51,33 @@ final class Store {
         let directory = URL.applicationSupportDirectory.appendingPathComponent("Courses", isDirectory: true)
         legacyURL = directory.appendingPathComponent("list.json")
         repository = LocalStore(directory: directory.appendingPathComponent("store-v2", isDirectory: true))
+        snapshot = LocalStoreSnapshot(library: .initial())
+        loadFailed = true
+        refreshAvailability()
+        ShareInvitationCenter.handler = { [weak self] metadata in self?.syncCoordinator?.accept(metadata) }
+        loadSnapshot()
+        // A CloudKit push can launch Caddie in the background while the iPhone
+        // is locked, when the protected cache cannot be read yet. Retry as soon
+        // as it becomes readable instead of keeping a placeholder snapshot.
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.protectedDataDidBecomeAvailableNotification, object: nil, queue: .main
+        ) { [weak self] _ in MainActor.assumeIsolated { self?.loadSnapshot() } }
+    }
+
+    private func loadSnapshot() {
+        guard loadFailed else { return }
         do {
             snapshot = try repository.load(legacyURL: legacyURL)
+            loadFailed = false
+            error = nil
         } catch {
             snapshot = LocalStoreSnapshot(library: .initial())
             loadFailed = true
-            self.error = "Impossible de lire vos listes. Vos données ont été conservées. Fermez puis relancez l’app."
+            if !Self.isProtectedDataUnavailable(error) {
+                self.error = "Impossible de lire vos listes. Vos données ont été conservées. Fermez puis relancez l’app."
+            }
+            return
         }
-        refreshAvailability()
 #if targetEnvironment(simulator)
         // The simulator does not have a signed-in iCloud container. Creating a
         // CKContainer for the app's production identifier raises an Objective-C
@@ -67,10 +86,16 @@ final class Store {
         // running in Simulator; real devices still initialize CloudKit below.
         syncCoordinator = nil
 #else
+        // Sync starts only from a snapshot read from disk: syncing the
+        // placeholder would overwrite the real cache and upload a new list.
         syncCoordinator = CloudSyncCoordinator(store: self, initialSnapshot: snapshot)
 #endif
-        ShareInvitationCenter.handler = { [weak self] metadata in self?.syncCoordinator?.accept(metadata) }
         syncCoordinator?.start()
+    }
+
+    private static func isProtectedDataUnavailable(_ error: Error) -> Bool {
+        guard let error = error as? CocoaError else { return false }
+        return error.code == .fileReadNoPermission || error.code == .fileWriteNoPermission
     }
 
     func refreshAvailability() {
@@ -79,6 +104,7 @@ final class Store {
 
     func refreshCloud() {
         refreshAvailability()
+        if loadFailed { loadSnapshot() }
         syncCoordinator?.fetchNow()
     }
 
@@ -221,6 +247,8 @@ final class Store {
 
     func replaceSnapshotFromSync(_ next: LocalStoreSnapshot) {
         guard !loadFailed else { return }
+        var next = next
+        next.onboarded = next.onboarded || snapshot.onboarded
         do {
             try repository.save(next)
             snapshot = next
@@ -231,7 +259,7 @@ final class Store {
     }
 
     func handleCloudAccountChange(_ accountIdentifier: String?) {
-        guard snapshot.cloudAccountIdentifier != accountIdentifier else { return }
+        guard !loadFailed, snapshot.cloudAccountIdentifier != accountIdentifier else { return }
         do {
             let wasOnboarded = snapshot.onboarded
             if let previous = snapshot.cloudAccountIdentifier {
@@ -253,6 +281,8 @@ final class Store {
                                           pendingMutations: library.lists.flatMap(MutationJournal.bootstrap),
                                           cloudAccountIdentifier: accountIdentifier)
             }
+            // Onboarding is per device: a restored account snapshot must not show it again.
+            next.onboarded = next.onboarded || wasOnboarded
             try repository.save(next)
             snapshot = next
             syncCoordinator?.schedule(snapshot: next)

@@ -52,7 +52,11 @@ struct LocalStore: LocalStoreProtocol {
 
     func load(legacyURL: URL) throws -> LocalStoreSnapshot {
         if FileManager.default.fileExists(atPath: snapshotURL.path) {
-            return try decodeSnapshot(at: snapshotURL)
+            // A cache written by an earlier launch means this is not the first
+            // launch: onboarding never comes back, even if the flag was lost.
+            var snapshot = try decodeSnapshot(at: snapshotURL)
+            snapshot.onboarded = true
+            return snapshot
         }
 
         let snapshot: LocalStoreSnapshot
@@ -65,7 +69,8 @@ struct LocalStore: LocalStoreProtocol {
             let entry = LibraryList(metadata: metadata, shoppingList: legacy, provenance: .local, cloudLocation: nil)
             snapshot = LocalStoreSnapshot(
                 library: ListLibrary(currentListID: id, lists: [entry]),
-                onboarded: legacy.onboarded,
+                // Data from the previous app version means an update, not a first launch.
+                onboarded: true,
                 pendingMutations: MutationJournal.bootstrap(entry),
                 migrationState: .legacyImported
             )
