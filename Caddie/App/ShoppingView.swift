@@ -174,6 +174,7 @@ struct ShoppingView: View {
             } message: { Text(store.error ?? "") }
             .onAppear { restoreAddPanel() }
             .onChange(of: scenePhase) { _, phase in if phase == .active { store.refreshCloud() } }
+            .onChange(of: store.loadFailed) { _, _ in restoreAddPanel() }
             .onChange(of: store.currentListID) { _, _ in
                 editing = nil
                 editingFromDrawer = nil
